@@ -298,10 +298,11 @@ def pdf_lines(commands, x, y, label, value, width=64, max_lines=2):
 
 def service_copy(commands, order, top, copy_name):
     bottom = top - 395
-    commands.extend(["0.18 0.48 0.72 rg", f"24 {top-38} 547 33 re f", "0 0 0 rg"])
-    pdf_text(commands, 34, top - 20, "BUZZ TECH", 13, True)
+    commands.extend(["0.02 0.03 0.02 rg", f"24 {top-42} 547 37 re f", f"q 64 0 0 36 31 {top-41} cm /Im1 Do Q", "1 1 1 rg"])
     pdf_text(commands, 385, top - 17, f"{order['number']} · {copy_name}", 8, True)
     pdf_text(commands, 385, top - 29, order.get("service_kind") or "ORDEM DE SERVIÇO", 5)
+    pdf_text(commands, 385, top - 37, "BUZZ TECH · ASSISTÊNCIA TÉCNICA ESPECIALIZADA", 4)
+    commands.append("0 0 0 rg")
     pdf_text(commands, 30, top-50, f"Entrada: {order.get('entry_date') or '—'}  Entrega: {order.get('delivery_date') or '—'}  Garantia: {order.get('warranty_until') or '—'}  Status: {order.get('status') or '—'}", 5, True)
     pdf_text(commands, 30, top-63, f"CLIENTE: {order.get('customer_name') or '—'}  CPF: {order.get('cpf') or '—'}  CONTATO: {order.get('phone') or '—'}  E-MAIL: {order.get('email') or '—'}", 5)
     pdf_text(commands, 30, top-74, f"ENDEREÇO: {order.get('address') or '—'}", 5)
@@ -328,8 +329,8 @@ def service_copy(commands, order, top, copy_name):
     for index, line in enumerate(textwrap.wrap(f"DECLARAÇÃO: {CLIENT_DECLARATION}", 165)[:2]):
         pdf_text(commands, 30, top-325-index*4, line, 3.4)
     pdf_text(commands, 30, top-345, f"Técnico: {order.get('technician') or '________________'}  Recebido por: {order.get('received_by') or '________________'}  Retirado por: {order.get('picked_up_by') or '________________'}  Cliente: ____________________", 4.5)
-    pdf_text(commands, 30, top-363, "Feira dos Importados de Brasília · Bloco A · Loja 73/74 · (61) 98199-4436 · @buzztechbsb", 3.4)
-    pdf_text(commands, 30, top-373, "Terça a domingo, 09h às 18h (inclusive feriados) · Este documento não possui valor fiscal.", 3.4)
+    pdf_text(commands, 30, top-363, "BUZZ TECH · Feira dos Importados de Brasília · Bloco A · Loja 73/74 · (61) 98199-4436 · @buzztechbsb", 4.2, True)
+    pdf_text(commands, 30, top-374, "Terça a domingo, 09h às 18h (inclusive feriados) · Este documento não possui valor fiscal.", 4)
     commands.append(f"0.65 0.65 0.65 RG 24 {bottom} 547 {top-bottom} re S")
 
 
@@ -356,13 +357,15 @@ def technician_page(commands, order):
 
 def write_simple_pdf(path, commands, media_box=(595, 842)):
     stream = "\n".join(commands).encode("cp1252", "replace")
+    logo = (ROOT / "01.jpg").read_bytes()
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {media_box[0]} {media_box[1]}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>".encode(),
+        f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {media_box[0]} {media_box[1]}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> /XObject << /Im1 7 0 R >> >> /Contents 4 0 R >>".encode(),
         f"<< /Length {len(stream)} >>\nstream\n".encode() + stream + b"\nendstream",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
+        f"<< /Type /XObject /Subtype /Image /Width 288 /Height 163 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length {len(logo)} >>\nstream\n".encode() + logo + b"\nendstream",
     ]
     content = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
     offsets = [0]

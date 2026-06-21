@@ -259,6 +259,8 @@ if (location.protocol === 'file:') {
 
 async function downloadPdf(order, variant = 'physical', share = false) {
   const technician = variant === 'technician';
+  const logoBytes = new Uint8Array(await (await fetch('/01.jpg')).arrayBuffer());
+  let logoBinary=''; for(let offset=0;offset<logoBytes.length;offset+=8192) logoBinary+=String.fromCharCode(...logoBytes.slice(offset,offset+8192));
   const clean = value => String(value || '—').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '?');
   const escapePdf = value => clean(value).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
   const commands = [];
@@ -279,20 +281,23 @@ async function downloadPdf(order, variant = 'physical', share = false) {
     });
   };
   const copy = (top,label) => {
-    commands.push(`0.16 0.48 0.82 rg 24 ${top-45} 547 40 re f`,`0 0 0 rg`);
-    text(38,top-22,'OS DIGITAL',17,true); text(390,top-22,`${order.number} · ${label}`,10,true);
-    let y=top-65; text(30,y,`Entrada: ${order.entry_date||'—'}   Entrega: ${order.delivery_date||'—'}   Status: ${order.status||'—'}`,7,true); y-=22;
-    field(30,y,'Cliente',order.customer_name,44); field(265,y,'Contato',order.phone||order.email,42); y-=32;
-    field(30,y,'CPF',order.cpf,24); field(165,y,'Aparelho',[order.device_type,order.brand,order.model].filter(Boolean).join(' · '),45); field(405,y,'Senha',order.unlock_password,24); y-=32;
-    field(30,y,'Problema informado',order.reported_issue,70,3); field(330,y,'Estado na entrada',order.device_condition,42,3); y-=45;
-    field(30,y,'Diagnostico / laudo',order.technical_report||'A preencher',70,3); field(350,y,'Valor',`R$ ${order.estimated_value||'—'}`,25); y-=45;
-    field(30,y,'Acessorios',order.accessories,62,2); field(330,y,'Checklist',order.technical_checklist,48,2); y-=38;
-    text(30,y,`GARANTIA REFERENTE A: ${order.warranty_items||'—'}`,4,true); y-=8;
-    text(30,y,'TELA TRINCADA, OXIDACAO E DANOS FISICOS NAO SAO COBERTOS PELA GARANTIA.',4,true); y-=8;
-    legalColumns(y); wrap(`DECLARACAO: ${CLIENT_DECLARATION}`,165).slice(0,2).forEach((line,index)=>text(30,top-325-index*4,line,3.4));
+    commands.push(`0.02 0.03 0.02 rg 24 ${top-42} 547 37 re f`,`q 64 0 0 36 31 ${top-41} cm /Im1 Do Q`,`1 1 1 rg`);
+    text(385,top-17,`${order.number} · ${label}`,8,true); text(385,top-29,order.service_kind||'ORDEM DE SERVICO',5); text(385,top-37,'BUZZ TECH · ASSISTENCIA TECNICA ESPECIALIZADA',4); commands.push('0 0 0 rg');
+    text(30,top-50,`Entrada: ${order.entry_date||'—'}  Entrega: ${order.delivery_date||'—'}  Garantia: ${order.warranty_until||'—'}  Status: ${order.status||'—'}`,5,true);
+    text(30,top-63,`CLIENTE: ${order.customer_name||'—'}  CPF: ${order.cpf||'—'}  CONTATO: ${order.phone||'—'}  E-MAIL: ${order.email||'—'}`,5);
+    text(30,top-74,`ENDERECO: ${order.address||'—'}`,5);
+    text(30,top-87,`APARELHO: ${order.device_type||'—'}  MARCA/MODELO: ${order.brand||'—'} / ${order.model||'—'}  COR/CAP.: ${order.color||'—'} / ${order.capacity||'—'}  IMEI/SERIE: ${order.serial_number||'—'}`,5);
+    text(30,top-98,`SENHA/PADRAO: ${order.unlock_password||'—'}  CONTA REMOVIDA: ${order.account_removed||'—'}  ACESSORIOS: ${order.accessories||'—'}`,5);
+    wrap(`DEFEITO: ${order.reported_issue||'—'}`,90).slice(0,3).forEach((line,index)=>text(30,top-112-index*6,line,5));
+    wrap(`ESTADO NA ENTRADA: ${order.device_condition||'—'}`,72).slice(0,3).forEach((line,index)=>text(330,top-112-index*6,line,5));
+    text(30,top-134,`CHECKLIST: ${order.technical_checklist||'—'}`,5);
+    wrap(`LAUDO/DIAGNOSTICO: ${order.technical_report||'A preencher'}  OBS.: ${order.notes||'—'}`,112).slice(0,3).forEach((line,index)=>text(30,top-147-index*6,line,5));
+    text(30,top-169,`VALOR: R$ ${order.estimated_value||'—'}  PAGAMENTO: ${order.payment_method||'—'}  GARANTIA REFERENTE A: ${order.warranty_items||'—'}`,5,true);
+    commands.push(`0.92 0.95 0.92 rg 30 ${top-185} 535 11 re f`,`0 0 0 rg`); text(35,top-181,'TELA TRINCADA, OXIDACAO E DANOS FISICOS NAO SAO COBERTOS PELA GARANTIA.',5,true);
+    legalColumns(top-195); wrap(`DECLARACAO: ${CLIENT_DECLARATION}`,165).slice(0,2).forEach((line,index)=>text(30,top-325-index*4,line,3.4));
     text(30,top-345,'Tecnico: ____________________   Cliente: ____________________   Data: ____/____/______',4.5);
-    text(30,top-363,'Feira dos Importados de Brasilia · Bloco A · Loja 73/74 · (61) 98199-4436 · @buzztechbsb',3.4);
-    text(30,top-373,'Terca a domingo, 09h as 18h (inclusive feriados) · Este documento nao possui valor fiscal.',3.4);
+    text(30,top-363,'BUZZ TECH · Feira dos Importados de Brasilia · Bloco A · Loja 73/74 · (61) 98199-4436 · @buzztechbsb',4.2,true);
+    text(30,top-374,'Terca a domingo, 09h as 18h (inclusive feriados) · Este documento nao possui valor fiscal.',4);
     commands.push(`0.7 0.7 0.7 RG 24 ${top-395} 547 395 re S`);
   };
   if (technician) {
@@ -304,10 +309,10 @@ async function downloadPdf(order, variant = 'physical', share = false) {
   else { copy(830,'VIA DA EMPRESA'); copy(420,'VIA DO CLIENTE'); }
   const stream=commands.join('\n');
   const pageSize = technician ? '0 0 142 255' : variant === 'physical' ? '0 0 595 842' : '0 0 595 421';
-  const objects=[`<< /Type /Catalog /Pages 2 0 R >>`,`<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,`<< /Type /Page /Parent 2 0 R /MediaBox [${pageSize}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>`,`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`];
+  const objects=[`<< /Type /Catalog /Pages 2 0 R >>`,`<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,`<< /Type /Page /Parent 2 0 R /MediaBox [${pageSize}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> /XObject << /Im1 7 0 R >> >> /Contents 4 0 R >>`,`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`,`<< /Type /XObject /Subtype /Image /Width 288 /Height 163 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logoBinary.length} >>\nstream\n${logoBinary}\nendstream`];
   let pdf='%PDF-1.4\n'; const offsets=[0]; objects.forEach((obj,i)=>{offsets.push(pdf.length);pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;}); const xref=pdf.length; pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`; offsets.slice(1).forEach(offset=>pdf+=`${String(offset).padStart(10,'0')} 00000 n \n`); pdf+=`trailer << /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   const suffix = technician ? '-TECNICO' : variant === 'client' ? '-CLIENTE-DIGITAL' : variant === 'store' ? '-LOJA' : '';
-  const blob=new Blob([pdf],{type:'application/pdf'});
+  const bytes=Uint8Array.from(pdf,character=>character.charCodeAt(0)&255); const blob=new Blob([bytes],{type:'application/pdf'});
   await shareOrDownload(blob, `${order.number}${suffix}.pdf`, share);
 }
 
