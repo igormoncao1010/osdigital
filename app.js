@@ -123,4 +123,10 @@ document.querySelector('#emptyNew').onclick = newOrder;
 document.querySelectorAll('[data-back]').forEach(button => button.onclick = () => show('list'));
 document.querySelector('#searchInput').oninput = renderList;
 document.querySelector('#statusFilter').onchange = renderList;
+document.addEventListener('keydown', event => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    if (!views.list.classList.contains('hidden')) document.querySelector('#searchInput').focus();
+  }
+});
 loadOrders().catch(() => toast('Não foi possível carregar as ordens.'));
