@@ -3,6 +3,8 @@ const form = document.querySelector('#orderForm');
 let orders = [];
 
 const localHost = ['127.0.0.1', 'localhost'].includes(location.hostname);
+const HOSTED_MODE = location.hostname.endsWith('.vercel.app');
+const STORAGE_KEY = 'os-digital-orders-v1';
 if (location.protocol === 'file:' || (localHost && location.port !== '8000')) {
   location.replace('http://127.0.0.1:8000');
 }
@@ -19,6 +21,11 @@ function show(name) {
 }
 
 async function loadOrders() {
+  if (HOSTED_MODE) {
+    orders = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    renderList();
+    return;
+  }
   const response = await fetch('/api/orders');
   orders = await responseJson(response);
   renderList();
@@ -35,6 +42,11 @@ async function responseJson(response) {
 
 async function checkServer() {
   const status = document.querySelector('#systemStatus');
+  if (HOSTED_MODE) {
+    status.className = 'system-live is-online';
+    status.querySelector('span').textContent = 'Salvo neste dispositivo';
+    return;
+  }
   try {
     const response = await fetch('/api/health', {cache:'no-store'});
     await responseJson(response);
@@ -105,8 +117,8 @@ function openDetail(id) {
     <div class="print-sheet">${printableCopy(o,'VIA DA EMPRESA')}${printableCopy(o,'VIA DO CLIENTE')}</div>`;
   views.detail.querySelector('[data-back]').onclick = () => show('list');
   views.detail.querySelector('#editDetail').onclick = () => editOrder(id);
-  views.detail.querySelector('#orderPdf').onclick = () => window.open(o.pdf_url, '_blank');
-  views.detail.querySelector('#techPdf').onclick = () => window.open(o.technician_pdf_url, '_blank');
+  views.detail.querySelector('#orderPdf').onclick = () => HOSTED_MODE ? downloadPdf(o, false) : window.open(o.pdf_url, '_blank');
+  views.detail.querySelector('#techPdf').onclick = () => HOSTED_MODE ? downloadPdf(o, true) : window.open(o.technician_pdf_url, '_blank');
   views.detail.querySelector('#printDetail').onclick = () => window.print();
   show('detail');
 }
@@ -139,9 +151,26 @@ form.onsubmit = async event => {
     const payload = Object.fromEntries(data.entries());
     delete payload.order_id;
     ['device_condition','accessories','technical_checklist'].forEach(name => payload[name] = data.getAll(name).join(', '));
-    const response = await fetch(id ? `/api/orders/${id}` : '/api/orders', {method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-    const result = await responseJson(response);
-    await loadOrders();
+    let result;
+    if (HOSTED_MODE) {
+      const now = new Date().toISOString();
+      if (id) {
+        const current = orders.find(item => item.id === Number(id));
+        result = {...current, ...payload, id:Number(id), updated_at:now};
+        orders = orders.map(item => item.id === Number(id) ? result : item);
+      } else {
+        const nextId = Number(localStorage.getItem('os-digital-sequence') || '0') + 1;
+        localStorage.setItem('os-digital-sequence', String(nextId));
+        result = {...payload, id:nextId, number:`OS-${String(nextId).padStart(6,'0')}`, created_at:now, updated_at:now};
+        orders.unshift(result);
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+      renderList();
+    } else {
+      const response = await fetch(id ? `/api/orders/${id}` : '/api/orders', {method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+      result = await responseJson(response);
+      await loadOrders();
+    }
     toast(id ? 'Alterações salvas.' : `${result.number} criada com sucesso.`);
     openDetail(result.id);
   } catch (error) {
@@ -179,4 +208,37 @@ if (location.protocol === 'file:') {
     console.error('[OS Digital] Servidor indisponível:', error);
     toast('Servidor desconectado. Feche e execute iniciar.ps1 novamente.');
   });
+}
+
+function downloadPdf(order, technician = false) {
+  const clean = value => String(value || '—').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '?');
+  const escapePdf = value => clean(value).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
+  const commands = [];
+  const text = (x,y,value,size=8,bold=false) => commands.push(`BT /${bold?'F2':'F1'} ${size} Tf ${x} ${y} Td (${escapePdf(value)}) Tj ET`);
+  const wrap = (value, width=78) => {
+    const words = clean(value).split(/\s+/); const lines=[]; let line='';
+    words.forEach(word => { if ((line+' '+word).trim().length > width) { lines.push(line); line=word; } else line=(line+' '+word).trim(); });
+    if (line) lines.push(line); return lines.length ? lines : ['—'];
+  };
+  const field = (x,y,label,value,width=78,max=2) => { text(x,y,label.toUpperCase(),6,true); wrap(value,width).slice(0,max).forEach((line,i)=>text(x,y-10-i*9,line,7)); };
+  const copy = (top,label) => {
+    commands.push(`0.16 0.48 0.82 rg 24 ${top-45} 547 40 re f`,`0 0 0 rg`);
+    text(38,top-22,'OS DIGITAL',17,true); text(390,top-22,`${order.number} · ${label}`,10,true);
+    let y=top-65; text(30,y,`Entrada: ${order.entry_date||'—'}   Entrega: ${order.delivery_date||'—'}   Status: ${order.status||'—'}`,7,true); y-=22;
+    field(30,y,'Cliente',order.customer_name,44); field(265,y,'Contato',order.phone||order.email,42); y-=32;
+    field(30,y,'CPF',order.cpf,24); field(165,y,'Aparelho',[order.device_type,order.brand,order.model].filter(Boolean).join(' · '),45); field(405,y,'Senha',order.unlock_password,24); y-=32;
+    field(30,y,'Problema informado',order.reported_issue,70,3); field(330,y,'Estado na entrada',order.device_condition,42,3); y-=45;
+    field(30,y,'Diagnostico / laudo',order.technical_report||'A preencher',70,3); field(350,y,'Valor',`R$ ${order.estimated_value||'—'}`,25); y-=45;
+    field(30,y,'Acessorios',order.accessories,62,2); field(330,y,'Checklist',order.technical_checklist,48,2); y-=38;
+    text(30,y,'Tecnico: ____________________   Cliente: ____________________   Data: ____/____/______',7);
+    commands.push(`0.7 0.7 0.7 RG 24 ${top-395} 547 395 re S`);
+  };
+  if (technician) {
+    commands.push('0.16 0.48 0.82 rg','24 758 547 60 re f','0 0 0 rg'); text(42,790,'FICHA DO TECNICO',20,true); text(430,790,order.number,15,true);
+    let y=730; [['Cliente',order.customer_name],['Contato',order.phone||order.email],['Aparelho',[order.device_type,order.brand,order.model].filter(Boolean).join(' · ')],['Senha / padrao',order.unlock_password],['Problema informado',order.reported_issue],['Diagnostico tecnico',order.technical_report||'A preencher pelo tecnico']].forEach(([label,value])=>{field(42,y,label,value,92,4);y-=78;});
+  } else { copy(830,'VIA DA EMPRESA'); copy(420,'VIA DO CLIENTE'); }
+  const stream=commands.join('\n');
+  const objects=[`<< /Type /Catalog /Pages 2 0 R >>`,`<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>`,`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`];
+  let pdf='%PDF-1.4\n'; const offsets=[0]; objects.forEach((obj,i)=>{offsets.push(pdf.length);pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;}); const xref=pdf.length; pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`; offsets.slice(1).forEach(offset=>pdf+=`${String(offset).padStart(10,'0')} 00000 n \n`); pdf+=`trailer << /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  const blob=new Blob([pdf],{type:'application/pdf'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`${order.number}${technician?'-TECNICO':''}.pdf`; link.click(); setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 }
