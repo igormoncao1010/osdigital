@@ -4,10 +4,10 @@ Sistema local de ordens de serviço com numeração sequencial permanente, cadas
 
 ## Como executar
 
-Clique com o botão direito em `iniciar.ps1` e escolha **Executar com PowerShell**. Se preferir o terminal, execute:
+Dê dois cliques em `iniciar.bat`. Ele inicia o servidor e abre o endereço correto automaticamente. Se preferir o terminal, execute:
 
 ```powershell
-.\iniciar.ps1
+.\iniciar.bat
 ```
 
 Depois acesse `http://127.0.0.1:8000` no navegador.

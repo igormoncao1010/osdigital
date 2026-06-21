@@ -2,6 +2,11 @@ const views = { list: document.querySelector('#listView'), form: document.queryS
 const form = document.querySelector('#orderForm');
 let orders = [];
 
+const localHost = ['127.0.0.1', 'localhost'].includes(location.hostname);
+if (location.protocol === 'file:' || (localHost && location.port !== '8000')) {
+  location.replace('http://127.0.0.1:8000');
+}
+
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const date = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : 'Não informada';
 const money = value => value === null || value === '' ? 'Não informado' : Number(value).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
@@ -15,8 +20,30 @@ function show(name) {
 
 async function loadOrders() {
   const response = await fetch('/api/orders');
-  orders = await response.json();
+  orders = await responseJson(response);
   renderList();
+}
+
+async function responseJson(response) {
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch { throw new Error('O servidor da OS não respondeu corretamente. Execute iniciar.bat novamente.'); }
+  if (!response.ok) throw new Error(data.error || 'Falha na comunicação com o servidor.');
+  return data;
+}
+
+async function checkServer() {
+  const status = document.querySelector('#systemStatus');
+  try {
+    const response = await fetch('/api/health', {cache:'no-store'});
+    await responseJson(response);
+    status.className = 'system-live is-online';
+    status.querySelector('span').textContent = 'Sistema online';
+  } catch {
+    status.className = 'system-live is-offline';
+    status.querySelector('span').textContent = 'Servidor desconectado';
+  }
 }
 
 function renderList() {
@@ -113,8 +140,7 @@ form.onsubmit = async event => {
     delete payload.order_id;
     ['device_condition','accessories','technical_checklist'].forEach(name => payload[name] = data.getAll(name).join(', '));
     const response = await fetch(id ? `/api/orders/${id}` : '/api/orders', {method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Não foi possível salvar a OS.');
+    const result = await responseJson(response);
     await loadOrders();
     toast(id ? 'Alterações salvas.' : `${result.number} criada com sucesso.`);
     openDetail(result.id);
@@ -148,6 +174,7 @@ document.addEventListener('keydown', event => {
 if (location.protocol === 'file:') {
   toast('Use o iniciar.ps1 para abrir o sistema corretamente.');
 } else {
+  checkServer();
   loadOrders().catch(error => {
     console.error('[OS Digital] Servidor indisponível:', error);
     toast('Servidor desconectado. Feche e execute iniciar.ps1 novamente.');

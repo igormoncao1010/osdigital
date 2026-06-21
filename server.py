@@ -95,6 +95,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == "/api/health":
+            return self.send_json({"status": "online"})
         if path == "/api/orders":
             with connection() as db:
                 rows = db.execute("SELECT * FROM service_orders ORDER BY id DESC").fetchall()
@@ -379,7 +381,8 @@ def generate_pdf(order, technician=False):
 
 if __name__ == "__main__":
     init_db()
+    server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"Sistema de OS disponível em http://{HOST}:{PORT}")
     if os.environ.get("OS_DIGITAL_NO_BROWSER") != "1":
         threading.Timer(1.0, lambda: webbrowser.open(f"http://{HOST}:{PORT}")).start()
-    ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
+    server.serve_forever()
