@@ -134,7 +134,7 @@ function openDetail(id) {
   const o = orders.find(item => item.id === id);
   if (!o) return;
   views.detail.innerHTML = `<div class="screen-detail">
-    <div class="detail-head"><div class="detail-head-left"><button class="back" data-back>←</button><div><p class="eyebrow">${esc(o.service_kind || 'ORDEM DE SERVIÇO')}</p><div class="order-big">${o.number}</div></div></div><div class="detail-actions"><button class="secondary" id="editDetail">Editar</button><button class="secondary" id="storePdf">Via da loja</button><button class="secondary" id="techPdf">Imprimir técnico</button><button class="secondary whatsapp" id="clientDigital">WhatsApp cliente</button><button class="primary" id="printDetail">Imprimir 2 vias</button></div></div>
+    <div class="detail-head"><div class="detail-head-left"><button class="back" data-back>←</button><div><p class="eyebrow">${esc(o.service_kind || 'ORDEM DE SERVIÇO')}</p><div class="order-big">${o.number}</div></div></div><div class="detail-actions"><button class="secondary" id="editDetail">Editar</button><button class="secondary" id="storePdf">Via da loja</button><button class="secondary" id="techPdf">Imprimir técnico</button><button class="secondary whatsapp" id="clientDigital">WhatsApp cliente</button><button class="primary" id="printDetail">Abrir 2 vias para imprimir</button></div></div>
     <div class="detail-grid"><div>
       <div class="detail-card"><h2>Cliente</h2><div class="info-grid">${info('Nome completo',o.customer_name)}${info('CPF',o.cpf)}${info('Telefone',o.phone)}${info('E-mail',o.email)}${info('Endereço',o.address,true)}</div></div>
       <div class="detail-card" style="margin-top:16px"><h2>Aparelho e atendimento</h2><div class="info-grid">${info('Aparelho',o.device_type)}${info('Marca / modelo',[o.brand,o.model].filter(Boolean).join(' / '))}${info('Cor / capacidade',[o.color,o.capacity].filter(Boolean).join(' / '))}${info('IMEI / série',o.serial_number)}${info('Senha / padrão',o.unlock_password)}${info('Conta removida',o.account_removed)}${info('Estado na entrada',o.device_condition,true)}${info('Acessórios',o.accessories,true)}${info('Checklist técnico',o.technical_checklist,true)}${info('Defeito relatado',o.reported_issue,true)}${info('Laudo técnico',o.technical_report,true)}${info('Observações',o.notes,true)}</div></div>
@@ -145,7 +145,7 @@ function openDetail(id) {
   views.detail.querySelector('#storePdf').onclick = () => HOSTED_MODE ? downloadPdf(o, 'store') : window.open(o.store_pdf_url, '_blank');
   views.detail.querySelector('#techPdf').onclick = () => HOSTED_MODE ? downloadPdf(o, 'technician') : window.open(o.technician_pdf_url, '_blank');
   views.detail.querySelector('#clientDigital').onclick = () => shareClientPdf(o);
-  views.detail.querySelector('#printDetail').onclick = () => window.print();
+  views.detail.querySelector('#printDetail').onclick = () => HOSTED_MODE ? downloadPdf(o, 'physical') : window.open(o.pdf_url, '_blank');
   show('detail');
 }
 
@@ -300,15 +300,48 @@ async function downloadPdf(order, variant = 'physical', share = false) {
     text(30,top-374,'Terca a domingo, 09h as 18h (inclusive feriados) · Este documento nao possui valor fiscal.',4);
     commands.push(`0.7 0.7 0.7 RG 24 ${top-395} 547 395 re S`);
   };
+  const digitalPage = (label,translateX=0,translateY=0,scale=1) => {
+    commands.push(`q ${scale} 0 0 ${scale} ${translateX} ${translateY} cm`);
+    commands.push('0.02 0.03 0.02 rg','24 762 547 62 re f','q 92 0 0 52 34 767 cm /Im1 Do Q','1 1 1 rg');
+    text(350,797,order.number,18,true); text(350,780,label,8,true); text(350,769,'ORDEM DE SERVICO · BUZZ TECH',6); commands.push('0 0 0 rg');
+    text(30,748,`Entrada: ${order.entry_date||'—'}    Entrega: ${order.delivery_date||'—'}    Garantia: ${order.warranty_until||'—'}    Status: ${order.status||'—'}`,7,true);
+    commands.push('0.92 0.96 0.86 rg','24 712 547 25 re f','0 0 0 rg'); text(32,722,'1  DADOS DO CLIENTE',9,true);
+    text(32,698,`Nome: ${order.customer_name||'—'}`,8); text(315,698,`Telefone: ${order.phone||'—'}`,8); text(32,682,`CPF: ${order.cpf||'—'}    E-mail: ${order.email||'—'}`,7); text(32,666,`Endereco: ${order.address||'—'}`,7);
+    commands.push('0.92 0.96 0.86 rg','24 625 547 25 re f','0 0 0 rg'); text(32,635,'2  DADOS DO APARELHO',9,true);
+    text(32,611,`Aparelho: ${order.device_type||'—'}    Marca: ${order.brand||'—'}    Modelo: ${order.model||'—'}`,7.5); text(32,595,`Cor: ${order.color||'—'}    Capacidade: ${order.capacity||'—'}    IMEI/Serie: ${order.serial_number||'—'}`,7); text(32,579,`Senha/Padrao: ${order.unlock_password||'—'}    Conta removida: ${order.account_removed||'—'}    Acessorios: ${order.accessories||'—'}`,7);
+    commands.push('0.92 0.96 0.86 rg','24 538 547 25 re f','0 0 0 rg'); text(32,548,'3  ATENDIMENTO E DIAGNOSTICO',9,true);
+    wrap(`Defeito informado: ${order.reported_issue||'—'}`,78).slice(0,3).forEach((line,index)=>text(32,522-index*11,line,7)); wrap(`Estado na entrada: ${order.device_condition||'—'}`,62).slice(0,3).forEach((line,index)=>text(315,522-index*11,line,7));
+    text(32,480,`Checklist: ${order.technical_checklist||'—'}`,6.5); wrap(`Laudo/Diagnostico: ${order.technical_report||'A preencher'}  Observacoes: ${order.notes||'—'}`,115).slice(0,3).forEach((line,index)=>text(32,462-index*10,line,7));
+    commands.push('0.02 0.03 0.02 rg','24 414 547 20 re f','1 1 1 rg'); text(50,421,'TELA TRINCADA, OXIDACAO E DANOS FISICOS NAO SAO COBERTOS PELA GARANTIA.',7,true); commands.push('0 0 0 rg');
+    [0,9].forEach((start,column)=>{let y=400,x=28+column*280;LEGAL_TERMS.slice(start,start+9).forEach((term,index)=>{wrap(`${start+index+1}. ${term}`,73).forEach(line=>{text(x,y,line,4.4);y-=5});y-=2})});
+    commands.push('0.92 0.96 0.86 rg','24 166 547 24 re f','0 0 0 rg'); text(32,175,`GARANTIA REFERENTE A: ${order.warranty_items||'—'}`,7,true); text(32,145,`Pagamento: ${order.payment_method||'—'}`,7);
+    commands.push('0.02 0.03 0.02 rg','300 126 271 31 re f','1 1 1 rg'); text(320,137,`VALOR TOTAL APROVADO: R$ ${order.estimated_value||'—'}`,9,true); commands.push('0 0 0 rg');
+    wrap(`DECLARACAO DO CLIENTE: ${CLIENT_DECLARATION}`,135).slice(0,3).forEach((line,index)=>text(30,108-index*7,line,5)); text(30,72,`Responsavel tecnico: ${order.technician||'________________'}`,6); text(220,72,`Recebido por: ${order.received_by||'________________'}`,6); text(390,72,'Assinatura do cliente: __________________',6);
+    commands.push('0.02 0.03 0.02 rg','24 24 547 31 re f','1 1 1 rg'); text(32,43,'BUZZ TECH · Feira dos Importados de Brasilia · Bloco A · Loja 73/74 · (61) 98199-4436 · @buzztechbsb',5.5,true); text(32,32,'Terca a domingo, 09h as 18h · Este documento nao possui valor fiscal.',5); commands.push('Q');
+  };
+  const compactCopy = (top,label) => {
+    const bar=(y,title,x=24,width=547)=>{commands.push('0.02 0.03 0.02 rg',`${x} ${y} ${width} 10 re f`,'1 1 1 rg');text(x+4,y+3,title,5.2,true);commands.push('0 0 0 rg')};
+    const box=(x,y,width,height,labelText,value,wrapWidth=38,maxLines=2)=>{commands.push('0.55 0.58 0.56 RG',`${x} ${y} ${width} ${height} re S`,'0 0 0 rg');if(labelText)text(x+3,y+height-6,labelText.toUpperCase(),3.6,true);wrap(value,wrapWidth).slice(0,maxLines).forEach((line,index)=>text(x+3,y+height-13-index*6,line,5))};
+    commands.push('0.02 0.03 0.02 rg',`24 ${top-34} 547 32 re f`,`q 66 0 0 29 31 ${top-32} cm /Im1 Do Q`,'1 1 1 rg');text(92,top-14,'BUZZ TECH',12,true);text(92,top-25,'Assistencia tecnica especializada',4.5);text(420,top-13,label,5);text(455,top-27,order.number,13,true);commands.push('0 0 0 rg');
+    text(28,top-44,`Entrada: ${order.entry_date||'—'}`,4.5,true);text(183,top-44,`Entrega: ${order.delivery_date||'—'}`,4.5,true);text(330,top-44,`Garantia: ${order.warranty_until||'—'}`,4.5,true);text(480,top-44,`Status: ${order.status||'—'}`,4.5,true);
+    bar(top-58,'1. DADOS DO CLIENTE');box(24,top-80,188,20,'Nome completo',order.customer_name,42);box(212,top-80,95,20,'CPF',order.cpf,20);box(307,top-80,115,20,'Telefone',order.phone,24);box(422,top-80,149,20,'E-mail',order.email,32);box(24,top-94,547,14,'Endereco',order.address,105,1);
+    bar(top-107,'2. DADOS DO APARELHO');box(24,top-129,110,20,'Aparelho',order.device_type,22);box(134,top-129,110,20,'Marca',order.brand,22);box(244,top-129,110,20,'Modelo',order.model,22);box(354,top-129,110,20,'Cor',order.color,22);box(464,top-129,107,20,'Capacidade',order.capacity,22);box(24,top-147,185,18,'IMEI / Serie',order.serial_number,36);box(209,top-147,185,18,'Senha / Padrao',order.unlock_password,36);box(394,top-147,177,18,'Conta removida',order.account_removed,34);
+    bar(top-159,'3. DEFEITO INFORMADO',24,181);bar(top-159,'4. ESTADO NA ENTRADA',207,181);bar(top-159,'5. ACESSORIOS',390,181);box(24,top-194,181,35,'',order.reported_issue,38,4);box(207,top-194,181,35,'',order.device_condition,38,4);box(390,top-194,181,35,'',order.accessories,38,4);
+    bar(top-206,'6. CHECKLIST TECNICO');box(24,top-220,547,14,'',order.technical_checklist,108,1);box(24,top-243,280,21,'Laudo / observacoes tecnicas',[order.technical_report,order.notes].filter(Boolean).join(' '),58,2);box(304,top-243,267,21,'Valor / Pagamento',`R$ ${order.estimated_value||'—'} · ${order.payment_method||'—'}`,52,2);box(24,top-255,547,12,'Garantia referente a',order.warranty_items,105,1);
+    bar(top-267,'TELA TRINCADA, OXIDACAO E DANOS FISICOS NAO SAO COBERTOS PELA GARANTIA.');[0,6,12].forEach((start,column)=>{let y=top-274,x=25+column*182;LEGAL_TERMS.slice(start,start+6).forEach((term,index)=>{wrap(`${start+index+1}. ${term}`,93).forEach(line=>{text(x,y,line,2.25);y-=2.5});y-=.7})});
+    text(25,top-327,`DECLARACAO DO CLIENTE: ${CLIENT_DECLARATION}`,2.6);box(24,top-349,190,18,'Responsavel tecnico',order.technician,38,1);box(214,top-349,100,18,'Recebido por',order.received_by,20,1);box(314,top-349,120,18,'Retirado por / CPF',[order.picked_up_by,order.pickup_cpf].filter(Boolean).join(' · '),24,1);box(434,top-349,137,18,'Assinatura do cliente','',26,1);text(175,top-358,'Feira dos Importados de Brasilia · Bloco A · Loja 73/74 · (61) 98199-4436 · @buzztechbsb',2.8);
+  };
   if (technician) {
-    commands.push('0.16 0.48 0.82 rg','6 213 130 36 re f','0 0 0 rg'); text(12,232,'BUZZ TECH',12,true); text(88,232,order.number,7,true); text(12,219,'FICHA DO TECNICO · 5 x 9 cm',5);
-    let y=199; [['Cliente',order.customer_name],['Contato',order.phone||order.email],['Senha / padrao',order.unlock_password],['Problema / diagnostico',order.technical_report||order.reported_issue||'A preencher']].forEach(([label,value],index)=>{field(10,y,label,value,index===3?34:36,index===3?5:3);y-=index===3?0:43;});
-    text(10,18,'Tecnico: ____________________',6); text(10,8,'Data: ____/____/______',6);
-  } else if (variant === 'client') { copy(420,'VIA DIGITAL DO CLIENTE'); }
-  else if (variant === 'store') { copy(420,'VIA ARQUIVADA DA LOJA'); }
-  else { copy(830,'VIA DA EMPRESA'); copy(420,'VIA DO CLIENTE'); }
+    commands.push('0.02 0.03 0.02 rg','6 213 130 36 re f','q 43 0 0 24 9 219 cm /Im1 Do Q','1 1 1 rg'); text(78,235,order.number,8,true); text(78,223,'FICHA DO TECNICO',5.5,true); commands.push('0 0 0 rg');
+    [[177,30,'CLIENTE',order.customer_name,31,2],[141,30,'CONTATO',[order.phone,order.email].filter(Boolean).join(' · '),31,2],[105,30,'SENHA / PADRAO',order.unlock_password,31,2],[38,61,'PROBLEMA / DIAGNOSTICO',order.technical_report||order.reported_issue||'A preencher',34,6]].forEach(([y,height,label,value,width,maxLines])=>{
+      commands.push('0.92 0.96 0.86 rg',`8 ${y+height-10} 126 10 re f`,'0.72 0.78 0.74 RG',`8 ${y} 126 ${height} re S`,'0 0 0 rg'); text(12,y+height-7,label,5.5,true); wrap(value,width).slice(0,maxLines).forEach((line,index)=>text(12,y+height-20-index*8,line,6.5));
+    });
+    text(10,29,`Tecnico: ${order.technician||'________________'}   Data: ____/____`,5); commands.push('0.02 0.03 0.02 rg','6 5 130 19 re f','1 1 1 rg'); text(11,15,'BUZZ TECH · (61) 98199-4436',5.5,true); text(11,8,'Feira dos Importados · Bloco A · Loja 73/74',4);
+  } else if (variant === 'client') { compactCopy(360,'VIA DIGITAL DO CLIENTE'); }
+  else if (variant === 'store') { compactCopy(360,'VIA ARQUIVADA DA LOJA'); }
+  else { compactCopy(820,'VIA DA LOJA'); compactCopy(400,'VIA DO CLIENTE'); }
   const stream=commands.join('\n');
-  const pageSize = technician ? '0 0 142 255' : variant === 'physical' ? '0 0 595 842' : '0 0 595 421';
+  const pageSize = technician ? '0 0 142 255' : variant === 'physical' ? '0 0 595 842' : '0 0 595 365';
   const objects=[`<< /Type /Catalog /Pages 2 0 R >>`,`<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,`<< /Type /Page /Parent 2 0 R /MediaBox [${pageSize}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> /XObject << /Im1 7 0 R >> >> /Contents 4 0 R >>`,`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`,`<< /Type /XObject /Subtype /Image /Width 288 /Height 163 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logoBinary.length} >>\nstream\n${logoBinary}\nendstream`];
   let pdf='%PDF-1.4\n'; const offsets=[0]; objects.forEach((obj,i)=>{offsets.push(pdf.length);pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;}); const xref=pdf.length; pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`; offsets.slice(1).forEach(offset=>pdf+=`${String(offset).padStart(10,'0')} 00000 n \n`); pdf+=`trailer << /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   const suffix = technician ? '-TECNICO' : variant === 'client' ? '-CLIENTE-DIGITAL' : variant === 'store' ? '-LOJA' : '';
