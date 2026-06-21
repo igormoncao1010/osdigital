@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OS Digital</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark"><i></i><i></i></span><div><strong>OS<span>/</span>DIGITAL</strong><small>Service intelligence</small></div></div>
+    <div class="top-actions"><div class="system-live"><i></i><span>Sistema online</span></div><button class="primary" id="newOrder"><span>＋</span> Nova ordem</button></div>
+  </header>
+
+  <main>
+    <section id="listView">
+      <div class="hero">
+        <div><p class="eyebrow"><span></span> CENTRAL DE OPERAÇÕES</p><h1>Ordens de <em>serviço.</em></h1><p>Controle preciso, atendimento fluido e nenhuma informação perdida.</p></div>
+        <div class="stats">
+          <div><span id="totalCount">0</span><small>Total</small></div>
+          <div><span id="openCount">0</span><small>Em aberto</small></div>
+          <div><span id="doneCount">0</span><small>Concluídas</small></div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <label class="search"><span>⌕</span><input id="searchInput" placeholder="Buscar OS, cliente ou dispositivo..."><kbd>⌘ K</kbd></label>
+        <select id="statusFilter"><option value="">Todos os status</option><option>Recebido</option><option>Em análise</option><option>Aguardando aprovação</option><option>Em reparo</option><option>Pronto</option><option>Entregue</option><option>Cancelado</option></select>
+      </div>
+      <div id="ordersList" class="orders-list"></div>
+      <div id="emptyState" class="empty hidden"><div>⌁</div><h2>Nenhuma OS por aqui</h2><p>Crie a primeira ordem de serviço para começar.</p><button class="primary" id="emptyNew">Criar primeira OS</button></div>
+    </section>
+
+    <section id="formView" class="hidden">
+      <div class="page-heading"><button class="back" data-back>←</button><div><p class="eyebrow" id="formEyebrow">NOVA ORDEM</p><h1 id="formTitle">Cadastrar ordem de serviço</h1></div></div>
+      <form id="orderForm">
+        <input type="hidden" id="orderId">
+        <div class="card"><div class="card-title"><span>01</span><div><h2>Datas e andamento</h2><p>Defina o tipo, os prazos e a situação atual.</p></div></div><div class="grid three">
+          <label>Data de entrada *<input type="date" name="entry_date" required></label>
+          <label>Previsão de entrega<input type="date" name="delivery_date"></label>
+          <label>Status<select name="status"><option>Recebido</option><option>Em análise</option><option>Aguardando aprovação</option><option>Em reparo</option><option>Pronto</option><option>Entregue</option><option>Cancelado</option></select></label>
+          <label>Tipo de documento<select name="service_kind"><option>Ordem de serviço</option><option>Orçamento</option><option>Garantia</option></select></label>
+          <label>Garantia até<input type="date" name="warranty_until"></label>
+        </div></div>
+        <div class="card"><div class="card-title"><span>02</span><div><h2>Dados do cliente</h2><p>Informações para contato e entrega.</p></div></div><div class="grid two">
+          <label>Nome completo *<input name="customer_name" required placeholder="Nome do cliente"></label>
+          <label>CPF<input name="cpf" placeholder="000.000.000-00"></label>
+          <label>E-mail<input name="email" type="email" placeholder="cliente@email.com"></label>
+          <label>Telefone<input name="phone" placeholder="(00) 00000-0000"></label>
+          <label class="span-2">Endereço<input name="address" placeholder="Rua, número, bairro e cidade"></label>
+        </div></div>
+        <div class="card"><div class="card-title"><span>03</span><div><h2>Dados do aparelho</h2><p>Identifique o equipamento recebido.</p></div></div><div class="grid three">
+          <label>Tipo do aparelho *<input name="device_type" required placeholder="Ex.: Notebook"></label>
+          <label>Marca<input name="brand" placeholder="Ex.: Dell"></label>
+          <label>Modelo<input name="model" placeholder="Ex.: Inspiron 15"></label>
+          <label>Cor<input name="color" placeholder="Ex.: Preto"></label>
+          <label>Capacidade<input name="capacity" placeholder="Ex.: 128 GB"></label>
+          <label>Número de série<input name="serial_number" placeholder="Serial ou IMEI"></label>
+          <label>Senha / padrão de desbloqueio<input name="unlock_password" placeholder="Senha informada"></label>
+          <label>Conta Apple/Google removida?<select name="account_removed"><option value="">Não informado</option><option>Sim</option><option>Não</option><option>Não se aplica</option></select></label>
+          <fieldset class="span-3 checks"><legend>Estado do aparelho na entrada</legend><label><input type="checkbox" name="device_condition" value="Tela trincada"> Tela trincada</label><label><input type="checkbox" name="device_condition" value="Tampa quebrada"> Tampa quebrada</label><label><input type="checkbox" name="device_condition" value="Amassado"> Amassado</label><label><input type="checkbox" name="device_condition" value="Oxidação/Líquido"> Oxidação/Líquido</label><label><input type="checkbox" name="device_condition" value="Sem imagem"> Sem imagem</label><label><input type="checkbox" name="device_condition" value="Não liga"> Não liga</label><label><input type="checkbox" name="device_condition" value="Já aberto"> Já aberto</label><label><input type="checkbox" name="device_condition" value="Touch falha"> Touch falha</label><label><input type="checkbox" name="device_condition" value="Botões falham"> Botões falham</label><label><input type="checkbox" name="device_condition" value="Carga intermitente"> Carga intermitente</label></fieldset>
+          <fieldset class="span-3 checks"><legend>Acessórios entregues</legend><label><input type="checkbox" name="accessories" value="Carregador"> Carregador</label><label><input type="checkbox" name="accessories" value="Cabo USB"> Cabo USB</label><label><input type="checkbox" name="accessories" value="Capinha"> Capinha</label><label><input type="checkbox" name="accessories" value="Cartão/Chip"> Cartão/Chip</label><label><input type="checkbox" name="accessories" value="Película"> Película</label><label><input type="checkbox" name="accessories" value="Caixa original"> Caixa original</label></fieldset>
+          <label class="span-3">Defeito relatado *<textarea name="reported_issue" required placeholder="Descreva o problema informado pelo cliente"></textarea></label>
+          <fieldset class="span-3 checks technical"><legend>Checklist técnico realizado na entrada</legend><label><input type="checkbox" name="technical_checklist" value="Liga"> Liga</label><label><input type="checkbox" name="technical_checklist" value="Carrega"> Carrega</label><label><input type="checkbox" name="technical_checklist" value="Som"> Som</label><label><input type="checkbox" name="technical_checklist" value="Microfone"> Microfone</label><label><input type="checkbox" name="technical_checklist" value="Alto-falante"> Alto-falante</label><label><input type="checkbox" name="technical_checklist" value="Wi-Fi"> Wi-Fi</label><label><input type="checkbox" name="technical_checklist" value="Bluetooth"> Bluetooth</label><label><input type="checkbox" name="technical_checklist" value="Face ID"> Face ID</label><label><input type="checkbox" name="technical_checklist" value="Biometria"> Biometria</label><label><input type="checkbox" name="technical_checklist" value="Câmeras"> Câmeras</label><label><input type="checkbox" name="technical_checklist" value="Botões"> Botões</label><label><input type="checkbox" name="technical_checklist" value="Chip"> Chip</label><label><input type="checkbox" name="technical_checklist" value="Tela"> Tela</label><label><input type="checkbox" name="technical_checklist" value="Conector"> Conector</label><label><input type="checkbox" name="technical_checklist" value="NFC"> NFC</label><label><input type="checkbox" name="technical_checklist" value="Vibração"> Vibração</label><label><input type="checkbox" name="technical_checklist" value="Flash"> Flash</label><label><input type="checkbox" name="technical_checklist" value="Proximidade"> Proximidade</label></fieldset>
+          <label class="span-3">Laudo técnico<textarea name="technical_report" placeholder="Diagnóstico e serviços realizados"></textarea></label>
+          <label>Valor estimado (R$)<input name="estimated_value" type="number" min="0" step="0.01" placeholder="0,00"></label>
+          <label class="span-2">Observações<input name="notes" placeholder="Senhas, avarias visíveis ou outras informações"></label>
+        </div></div>
+        <div class="card"><div class="card-title"><span>04</span><div><h2>Pagamento e retirada</h2><p>Preencha na conclusão ou entrega do aparelho.</p></div></div><div class="grid three">
+          <label>Forma de pagamento<select name="payment_method"><option value="">Não informado</option><option>Dinheiro</option><option>Pix</option><option>Cartão</option><option>Transferência</option></select></label>
+          <label>Responsável técnico<input name="technician"></label><label>Recebido por<input name="received_by"></label>
+          <label>Retirado por<input name="picked_up_by"></label><label>CPF de quem retirou<input name="pickup_cpf"></label><label>Data da retirada<input type="date" name="pickup_date"></label>
+        </div></div>
+        <div class="form-actions"><button type="button" class="secondary" data-back>Cancelar</button><button class="primary" type="submit" id="saveButton">Salvar e gerar número</button></div>
+      </form>
+    </section>
+
+    <section id="detailView" class="hidden"></section>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
