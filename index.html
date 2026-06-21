@@ -9,7 +9,7 @@
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark"><i></i><i></i></span><div><strong>OS<span>/</span>DIGITAL</strong><small>Service intelligence</small></div></div>
+    <div class="brand"><span class="brand-mark"><img src="/01.jpg" alt="Buzz Tech"></span><div><strong>BUZZ<span>/</span>TECH</strong><small>Assistência técnica especializada</small></div></div>
     <div class="top-actions"><div class="system-live is-checking" id="systemStatus"><i></i><span>Verificando servidor</span></div><button class="primary" id="newOrder"><span>＋</span> Nova ordem</button></div>
   </header>
 
@@ -44,7 +44,7 @@
         </div></div>
         <div class="card"><div class="card-title"><span>02</span><div><h2>Dados do cliente</h2><p>Informações para contato e entrega.</p></div></div><div class="grid two">
           <label>Nome completo *<input name="customer_name" required placeholder="Nome do cliente"></label>
-          <label>CPF<input name="cpf" placeholder="000.000.000-00"></label>
+          <label>CPF<input name="cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00"></label>
           <label>E-mail<input name="email" type="email" placeholder="cliente@email.com"></label>
           <label>Telefone<input name="phone" placeholder="(00) 00000-0000"></label>
           <label class="span-2">Endereço<input name="address" placeholder="Rua, número, bairro e cidade"></label>
@@ -63,13 +63,13 @@
           <label class="span-3">Defeito relatado *<textarea name="reported_issue" required placeholder="Descreva o problema informado pelo cliente"></textarea></label>
           <fieldset class="span-3 checks technical"><legend>Checklist técnico realizado na entrada</legend><label><input type="checkbox" name="technical_checklist" value="Liga"> Liga</label><label><input type="checkbox" name="technical_checklist" value="Carrega"> Carrega</label><label><input type="checkbox" name="technical_checklist" value="Som"> Som</label><label><input type="checkbox" name="technical_checklist" value="Microfone"> Microfone</label><label><input type="checkbox" name="technical_checklist" value="Alto-falante"> Alto-falante</label><label><input type="checkbox" name="technical_checklist" value="Wi-Fi"> Wi-Fi</label><label><input type="checkbox" name="technical_checklist" value="Bluetooth"> Bluetooth</label><label><input type="checkbox" name="technical_checklist" value="Face ID"> Face ID</label><label><input type="checkbox" name="technical_checklist" value="Biometria"> Biometria</label><label><input type="checkbox" name="technical_checklist" value="Câmeras"> Câmeras</label><label><input type="checkbox" name="technical_checklist" value="Botões"> Botões</label><label><input type="checkbox" name="technical_checklist" value="Chip"> Chip</label><label><input type="checkbox" name="technical_checklist" value="Tela"> Tela</label><label><input type="checkbox" name="technical_checklist" value="Conector"> Conector</label><label><input type="checkbox" name="technical_checklist" value="NFC"> NFC</label><label><input type="checkbox" name="technical_checklist" value="Vibração"> Vibração</label><label><input type="checkbox" name="technical_checklist" value="Flash"> Flash</label><label><input type="checkbox" name="technical_checklist" value="Proximidade"> Proximidade</label></fieldset>
           <label class="span-3">Laudo técnico<textarea name="technical_report" placeholder="Diagnóstico e serviços realizados"></textarea></label>
-          <label>Valor estimado (R$)<input name="estimated_value" type="number" min="0" step="0.01" placeholder="0,00"></label>
+          <label>Valor estimado<input name="estimated_value" inputmode="numeric" placeholder="R$ 0,00"></label>
           <label class="span-2">Observações<input name="notes" placeholder="Senhas, avarias visíveis ou outras informações"></label>
         </div></div>
         <div class="card"><div class="card-title"><span>04</span><div><h2>Pagamento e retirada</h2><p>Preencha na conclusão ou entrega do aparelho.</p></div></div><div class="grid three">
           <label>Forma de pagamento<select name="payment_method"><option value="">Não informado</option><option>Dinheiro</option><option>Pix</option><option>Cartão</option><option>Transferência</option></select></label>
           <label>Responsável técnico<input name="technician"></label><label>Recebido por<input name="received_by"></label>
-          <label>Retirado por<input name="picked_up_by"></label><label>CPF de quem retirou<input name="pickup_cpf"></label><label>Data da retirada<input type="date" name="pickup_date"></label>
+          <label>Retirado por<input name="picked_up_by"></label><label>CPF de quem retirou<input name="pickup_cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00"></label><label>Data da retirada<input type="date" name="pickup_date"></label>
         </div></div>
         <div class="form-actions"><button type="button" class="secondary" data-back>Cancelar</button><button class="primary" type="submit" id="saveButton">Salvar e gerar número</button></div>
       </form>

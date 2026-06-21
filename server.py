@@ -273,7 +273,7 @@ def pdf_lines(commands, x, y, label, value, width=64, max_lines=2):
 def service_copy(commands, order, top, copy_name):
     bottom = top - 395
     commands.extend(["0.18 0.48 0.72 rg", f"24 {top-48} 547 42 re f", "0 0 0 rg"])
-    pdf_text(commands, 38, top - 25, "OS DIGITAL", 17, True)
+    pdf_text(commands, 38, top - 25, "BUZZ TECH", 17, True)
     pdf_text(commands, 390, top - 20, f"{order['number']}  ·  {copy_name}", 10, True)
     pdf_text(commands, 390, top - 36, order.get("service_kind") or "ORDEM DE SERVIÇO", 7)
     y = top - 66
@@ -319,35 +319,32 @@ def service_copy(commands, order, top, copy_name):
 
 
 def technician_page(commands, order):
-    commands.extend(["0.18 0.48 0.72 rg", "24 758 547 60 re f", "0 0 0 rg"])
-    pdf_text(commands, 42, 790, "FICHA TÉCNICA", 20, True)
-    pdf_text(commands, 420, 790, order["number"], 16, True)
-    pdf_text(commands, 42, 770, "Documento interno · não entregar ao cliente", 8)
-    y = 730
-    for label, value in [
-        ("CLIENTE", order.get("customer_name")),
-        ("CONTATO", " · ".join(filter(None, [order.get("phone"), order.get("email")]))),
-        ("APARELHO", " · ".join(filter(None, [order.get("device_type"), order.get("brand"), order.get("model")]))),
-        ("SENHA / PADRÃO", order.get("unlock_password")),
-        ("PROBLEMA INFORMADO", order.get("reported_issue")),
-        ("ESTADO NA ENTRADA", order.get("device_condition")),
-        ("ACESSÓRIOS", order.get("accessories")),
-        ("DIAGNÓSTICO TÉCNICO", order.get("technical_report") or "A preencher pelo técnico"),
-    ]:
-        commands.append(f"0.86 0.89 0.91 RG 32 {y-48} 531 58 re S")
-        pdf_lines(commands, 44, y - 12, label, value, 96, 4)
-        y -= 68
-    pdf_text(commands, 42, 145, "Serviço realizado / peças utilizadas:", 8, True)
-    commands.extend(["0.7 0.7 0.7 RG", "42 125 m 550 125 l S", "42 100 m 550 100 l S", "42 75 m 550 75 l S"])
-    pdf_text(commands, 42, 45, "Técnico: __________________________   Data: ____/____/______   Assinatura: __________________________", 8)
+    commands.extend(["0.18 0.48 0.72 rg", "6 213 130 36 re f", "0 0 0 rg"])
+    pdf_text(commands, 12, 232, "BUZZ TECH", 12, True)
+    pdf_text(commands, 88, 232, order["number"], 7, True)
+    pdf_text(commands, 12, 219, "FICHA DO TÉCNICO · 5 x 9 cm", 5)
+    fields = [
+        ("CLIENTE", order.get("customer_name"), 3),
+        ("CONTATO", " · ".join(filter(None, [order.get("phone"), order.get("email")])), 3),
+        ("SENHA / PADRÃO", order.get("unlock_password"), 2),
+        ("PROBLEMA / DIAGNÓSTICO", order.get("technical_report") or order.get("reported_issue") or "A preencher", 5),
+    ]
+    y = 199
+    for index, (label, value, lines) in enumerate(fields):
+        height = 52 if index == 3 else 36
+        commands.append(f"0.82 0.86 0.9 RG 8 {y-height+4} 126 {height} re S")
+        pdf_lines(commands, 12, y - 6, label, value, 28 if index == 3 else 31, lines)
+        y -= height + 5
+    pdf_text(commands, 10, 18, "Técnico: ____________________", 6)
+    pdf_text(commands, 10, 8, "Data: ____/____/______", 6)
 
 
-def write_simple_pdf(path, commands):
+def write_simple_pdf(path, commands, media_box=(595, 842)):
     stream = "\n".join(commands).encode("cp1252", "replace")
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>",
+        f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {media_box[0]} {media_box[1]}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>".encode(),
         f"<< /Length {len(stream)} >>\nstream\n".encode() + stream + b"\nendstream",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
@@ -375,7 +372,7 @@ def generate_pdf(order, technician=False):
     else:
         service_copy(commands, order, 830, "VIA DA EMPRESA")
         service_copy(commands, order, 420, "VIA DO CLIENTE")
-    write_simple_pdf(target, commands)
+    write_simple_pdf(target, commands, (142, 255) if technician else (595, 842))
     return target
 
 

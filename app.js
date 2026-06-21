@@ -99,6 +99,10 @@ function editOrder(id) {
     if (field.type === 'checkbox') field.checked = String(order[field.name]).split(', ').includes(field.value);
     else field.value = order[field.name];
   });
+  const valueField = form.elements.estimated_value;
+  if (valueField.value) valueField.value = Number(valueField.value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  form.elements.cpf.value = cpfMask(form.elements.cpf.value);
+  form.elements.pickup_cpf.value = cpfMask(form.elements.pickup_cpf.value);
   document.querySelector('#formEyebrow').textContent = order.number;
   document.querySelector('#formTitle').textContent = 'Editar ordem de serviço';
   document.querySelector('#saveButton').textContent = 'Salvar alterações';
@@ -126,7 +130,7 @@ function openDetail(id) {
 function printableCopy(o, copyLabel) {
   const line = (label, value) => `<div class="p-field"><b>${label}</b><span>${esc(value || '—')}</span></div>`;
   return `<section class="print-copy">
-    <header class="p-head"><div><strong>OS DIGITAL</strong><small>Assistência técnica</small></div><div class="p-number"><small>${esc(o.service_kind || 'ORDEM DE SERVIÇO')} · ${copyLabel}</small><b>${o.number}</b></div></header>
+    <header class="p-head"><div class="p-brand"><img src="/01.jpg" alt="Buzz Tech"><div><strong>BUZZ TECH</strong><small>Assistência técnica especializada</small></div></div><div class="p-number"><small>${esc(o.service_kind || 'ORDEM DE SERVIÇO')} · ${copyLabel}</small><b>${o.number}</b></div></header>
     <div class="p-strip"><b>Entrada:</b> ${date(o.entry_date)} <b>Entrega:</b> ${date(o.delivery_date)} <b>Garantia:</b> ${date(o.warranty_until)} <b>Status:</b> ${esc(o.status)}</div>
     <h3>1. DADOS DO CLIENTE</h3><div class="p-grid p4">${line('Nome completo',o.customer_name)}${line('CPF',o.cpf)}${line('Telefone',o.phone)}${line('E-mail',o.email)}</div>${line('Endereço',o.address)}
     <h3>2. DADOS DO APARELHO</h3><div class="p-grid p5">${line('Aparelho',o.device_type)}${line('Marca',o.brand)}${line('Modelo',o.model)}${line('Cor',o.color)}${line('Capacidade',o.capacity)}</div><div class="p-grid p3">${line('IMEI / Série',o.serial_number)}${line('Senha / padrão',o.unlock_password)}${line('Conta removida',o.account_removed)}</div>
@@ -150,6 +154,7 @@ form.onsubmit = async event => {
     const data = new FormData(form);
     const payload = Object.fromEntries(data.entries());
     delete payload.order_id;
+    payload.estimated_value = currencyToNumber(payload.estimated_value);
     ['device_condition','accessories','technical_checklist'].forEach(name => payload[name] = data.getAll(name).join(', '));
     let result;
     if (HOSTED_MODE) {
@@ -188,6 +193,23 @@ function toast(message) {
   node.textContent = message; node.classList.add('show');
   setTimeout(() => node.classList.remove('show'), 3000);
 }
+
+function cpfMask(value) {
+  return value.replace(/\D/g,'').slice(0,11).replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+}
+
+function currencyMask(value) {
+  const cents = Number(value.replace(/\D/g,''));
+  return (cents / 100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+
+function currencyToNumber(value) {
+  if (!value) return '';
+  return (Number(value.replace(/\D/g,'')) / 100).toFixed(2);
+}
+
+form.querySelectorAll('[name="cpf"],[name="pickup_cpf"]').forEach(field => field.addEventListener('input', () => field.value = cpfMask(field.value)));
+form.elements.estimated_value.addEventListener('input', event => event.target.value = currencyMask(event.target.value));
 
 document.querySelector('#newOrder').onclick = newOrder;
 document.querySelector('#emptyNew').onclick = newOrder;
@@ -234,11 +256,13 @@ function downloadPdf(order, technician = false) {
     commands.push(`0.7 0.7 0.7 RG 24 ${top-395} 547 395 re S`);
   };
   if (technician) {
-    commands.push('0.16 0.48 0.82 rg','24 758 547 60 re f','0 0 0 rg'); text(42,790,'FICHA DO TECNICO',20,true); text(430,790,order.number,15,true);
-    let y=730; [['Cliente',order.customer_name],['Contato',order.phone||order.email],['Aparelho',[order.device_type,order.brand,order.model].filter(Boolean).join(' · ')],['Senha / padrao',order.unlock_password],['Problema informado',order.reported_issue],['Diagnostico tecnico',order.technical_report||'A preencher pelo tecnico']].forEach(([label,value])=>{field(42,y,label,value,92,4);y-=78;});
+    commands.push('0.16 0.48 0.82 rg','6 213 130 36 re f','0 0 0 rg'); text(12,232,'BUZZ TECH',12,true); text(88,232,order.number,7,true); text(12,219,'FICHA DO TECNICO · 5 x 9 cm',5);
+    let y=199; [['Cliente',order.customer_name],['Contato',order.phone||order.email],['Senha / padrao',order.unlock_password],['Problema / diagnostico',order.technical_report||order.reported_issue||'A preencher']].forEach(([label,value],index)=>{field(10,y,label,value,index===3?34:36,index===3?5:3);y-=index===3?0:43;});
+    text(10,18,'Tecnico: ____________________',6); text(10,8,'Data: ____/____/______',6);
   } else { copy(830,'VIA DA EMPRESA'); copy(420,'VIA DO CLIENTE'); }
   const stream=commands.join('\n');
-  const objects=[`<< /Type /Catalog /Pages 2 0 R >>`,`<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>`,`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`];
+  const pageSize = technician ? '0 0 142 255' : '0 0 595 842';
+  const objects=[`<< /Type /Catalog /Pages 2 0 R >>`,`<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,`<< /Type /Page /Parent 2 0 R /MediaBox [${pageSize}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>`,`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`];
   let pdf='%PDF-1.4\n'; const offsets=[0]; objects.forEach((obj,i)=>{offsets.push(pdf.length);pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;}); const xref=pdf.length; pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`; offsets.slice(1).forEach(offset=>pdf+=`${String(offset).padStart(10,'0')} 00000 n \n`); pdf+=`trailer << /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   const blob=new Blob([pdf],{type:'application/pdf'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`${order.number}${technician?'-TECNICO':''}.pdf`; link.click(); setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 }
