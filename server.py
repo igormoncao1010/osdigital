@@ -1,7 +1,10 @@
 import json
 import mimetypes
+import os
 import sqlite3
 import textwrap
+import threading
+import webbrowser
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -137,6 +140,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if urlparse(self.path).path != "/api/orders":
             return self.send_json({"error": "Rota não encontrada."}, 404)
+        print("[OS] Solicitação para criar ordem recebida.")
         payload = self.body()
         if payload is None:
             return self.send_json({"error": "JSON inválido."}, 400)
@@ -157,6 +161,7 @@ class Handler(BaseHTTPRequestHandler):
         order = order_dict(row)
         generate_pdf(order, False)
         generate_pdf(order, True)
+        print(f"[OS] {order['number']} criada; PDFs gerados em {PDF_DIR}.")
         return self.send_json(order, 201)
 
     def do_PUT(self):
@@ -375,4 +380,6 @@ def generate_pdf(order, technician=False):
 if __name__ == "__main__":
     init_db()
     print(f"Sistema de OS disponível em http://{HOST}:{PORT}")
+    if os.environ.get("OS_DIGITAL_NO_BROWSER") != "1":
+        threading.Timer(1.0, lambda: webbrowser.open(f"http://{HOST}:{PORT}")).start()
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()

@@ -42,7 +42,7 @@ function renderList() {
 
 function newOrder() {
   form.reset();
-  form.orderId.value = '';
+  document.querySelector('#orderId').value = '';
   form.entry_date.value = new Date().toISOString().slice(0, 10);
   document.querySelector('#formEyebrow').textContent = 'NOVA ORDEM';
   document.querySelector('#formTitle').textContent = 'Cadastrar ordem de serviço';
@@ -54,7 +54,7 @@ function editOrder(id) {
   const order = orders.find(item => item.id === id);
   if (!order) return;
   form.reset();
-  form.orderId.value = id;
+  document.querySelector('#orderId').value = id;
   [...form.elements].forEach(field => {
     if (!field.name || order[field.name] == null) return;
     if (field.type === 'checkbox') field.checked = String(order[field.name]).split(', ').includes(field.value);
@@ -102,16 +102,30 @@ function printableCopy(o, copyLabel) {
 
 form.onsubmit = async event => {
   event.preventDefault();
-  const id = form.orderId.value;
-  const data = new FormData(form);
-  const payload = Object.fromEntries(data.entries());
-  ['device_condition','accessories','technical_checklist'].forEach(name => payload[name] = data.getAll(name).join(', '));
-  const response = await fetch(id ? `/api/orders/${id}` : '/api/orders', {method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-  const result = await response.json();
-  if (!response.ok) return toast(result.error || 'Não foi possível salvar a OS.');
-  await loadOrders();
-  toast(id ? 'Alterações salvas.' : `${result.number} criada com sucesso.`);
-  openDetail(result.id);
+  const button = document.querySelector('#saveButton');
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Gerando ordem...';
+  try {
+    const id = document.querySelector('#orderId').value;
+    const data = new FormData(form);
+    const payload = Object.fromEntries(data.entries());
+    delete payload.order_id;
+    ['device_condition','accessories','technical_checklist'].forEach(name => payload[name] = data.getAll(name).join(', '));
+    const response = await fetch(id ? `/api/orders/${id}` : '/api/orders', {method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Não foi possível salvar a OS.');
+    await loadOrders();
+    toast(id ? 'Alterações salvas.' : `${result.number} criada com sucesso.`);
+    openDetail(result.id);
+  } catch (error) {
+    const offline = location.protocol === 'file:' || !navigator.onLine;
+    toast(offline ? 'Abra o sistema pelo iniciar.ps1. O servidor não está conectado.' : (error.message || 'Erro ao gerar a ordem de serviço.'));
+    console.error('[OS Digital] Falha ao salvar:', error);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
 };
 
 function toast(message) {
@@ -131,4 +145,11 @@ document.addEventListener('keydown', event => {
     if (!views.list.classList.contains('hidden')) document.querySelector('#searchInput').focus();
   }
 });
-loadOrders().catch(() => toast('Não foi possível carregar as ordens.'));
+if (location.protocol === 'file:') {
+  toast('Use o iniciar.ps1 para abrir o sistema corretamente.');
+} else {
+  loadOrders().catch(error => {
+    console.error('[OS Digital] Servidor indisponível:', error);
+    toast('Servidor desconectado. Feche e execute iniciar.ps1 novamente.');
+  });
+}
