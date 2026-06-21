@@ -39,6 +39,21 @@
   .p-brand{display:flex;align-items:center;gap:3mm}.p-brand img{display:block;width:26mm;height:10mm;object-fit:contain;background:#050505;border-radius:1mm}.p-brand strong,.p-brand small{display:block}
 }
 
+@media print{
+  .print-copy{padding:3mm 5mm 2.5mm;font-size:5.4pt;line-height:1.08}
+  .p-head{height:10mm;padding:1.2mm 3mm}.p-brand img{width:21mm;height:8mm}.p-head strong{font-size:11pt}.p-head small{font-size:4.5pt}.p-number b{font-size:12pt}.p-number small{font-size:4.5pt}
+  .p-strip{padding:.7mm 1.2mm;font-size:5pt}.print-copy h3{font-size:5pt;margin:.55mm 0 .25mm;padding:.4mm 1mm}
+  .p-field{min-height:4mm;padding:.45mm .8mm}.p-field b{font-size:4.2pt}.p-field span{margin-top:.15mm;min-height:1mm}
+  .blocks{gap:.7mm}.blocks>div{min-height:10mm}.blocks p,.notes p{margin:.4mm .7mm}
+  .p-check{min-height:3.5mm;padding:.5mm}.notes{gap:.7mm;margin-top:.5mm}.notes>div{min-height:6mm;padding:.5mm}
+  .p-warranty{border:1px solid #333;padding:.45mm .8mm;margin-top:.45mm;font-size:4.2pt}
+  .p-warning{font-size:5pt;padding:.55mm;margin-top:.45mm}
+  .p-legal{column-count:3;column-gap:2.2mm;font-size:3.35pt;line-height:1.05;text-align:justify;margin:.55mm 0}.p-legal p{break-inside:avoid;margin:0 0 .35mm}
+  .p-declaration{font-size:3.35pt;line-height:1.05;margin:.45mm 0}
+  .signatures{gap:.6mm}.signatures .p-field{min-height:5mm;padding:.35mm}.signatures span{margin-top:1.5mm}
+  .p-footer{text-align:center;font-size:3pt;margin-top:.45mm;border-top:.2mm solid #333;padding-top:.35mm}
+}
+
 /* Tema claro tecnológico */
 @media screen{
   :root{--ink:#17223b;--muted:#74819a;--line:#dfe7f2;--paper:#f4f7fb;--white:#fff;--green:#2d7dd2;--green2:#eaf4ff;--orange:#ef8d32;--shadow:0 22px 65px rgba(43,72,115,.11)}
@@ -50,7 +65,7 @@
   .system-live{color:#8492a9}.system-live i{background:#36c98f;box-shadow:0 0 0 4px rgba(54,201,143,.12),0 0 13px rgba(54,201,143,.5)}
   .system-live.is-checking i{background:#e6a23c;box-shadow:0 0 0 4px rgba(230,162,60,.12)}.system-live.is-offline{color:#bd5360}.system-live.is-offline i{background:#e75b69;box-shadow:0 0 0 4px rgba(231,91,105,.12),0 0 12px rgba(231,91,105,.3);animation:none}
   .primary{background:linear-gradient(135deg,#2d7dd2,#3d94e8);color:#fff;box-shadow:0 10px 28px rgba(45,125,210,.22)}.primary:hover{background:linear-gradient(135deg,#236ebd,#3287da);box-shadow:0 14px 35px rgba(45,125,210,.3)}
-  .secondary{background:rgba(255,255,255,.8);border-color:#d9e3ef;color:#42516b}.secondary:hover{background:#fff;border-color:#a9c8e8;color:#246bad}
+  .secondary{background:rgba(255,255,255,.8);border-color:#d9e3ef;color:#42516b}.secondary:hover{background:#fff;border-color:#a9c8e8;color:#246bad}.detail-actions{flex-wrap:wrap;justify-content:flex-end}.secondary.whatsapp{color:#16885b;border-color:#bce8d4;background:#effbf5}.secondary.whatsapp:hover{background:#daf6e9;border-color:#7ed6af}
   .eyebrow{color:#2d7dd2}.eyebrow span{background:#2d7dd2;box-shadow:0 0 9px rgba(45,125,210,.35)}.hero h1,.page-heading h1{color:#182642}.hero h1 em{color:#8290a7}.hero p:last-child{color:#74819a}
   .stats{background:rgba(255,255,255,.76);border-color:rgba(75,112,156,.12);box-shadow:inset 0 1px #fff,0 18px 55px rgba(54,83,122,.08)}.stats div{border-color:#e6edf5}.stats span{color:#263753}.stats div:nth-child(2) span{color:#e48831}.stats div:nth-child(3) span{color:#2d7dd2}.stats small{color:#8995a9}
   .search{background:rgba(255,255,255,.82);border-color:#dde6f0;box-shadow:0 8px 24px rgba(51,78,113,.045)}.search:focus-within{border-color:#78b5ec;box-shadow:0 0 0 4px rgba(45,125,210,.08)}.search span{color:#7b8ca4}.search input{color:#25354f}.search input::placeholder{color:#a0aabc}.search kbd{background:#f3f7fb;border-color:#dce5ef;color:#8492a7}.toolbar select{background-color:rgba(255,255,255,.9);color:#5e6d85;border-color:#dde6f0}

@@ -14,6 +14,27 @@ const date = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('
 const money = value => value === null || value === '' ? 'Não informado' : Number(value).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 const info = (label, value, wide = false) => `<div class="info-item ${wide ? 'wide' : ''}"><small>${label}</small><p>${esc(value || 'Não informado')}</p></div>`;
 const marked = value => esc(value || 'Nenhum item marcado');
+const LEGAL_TERMS = [
+  'Toda troca de peças ou manutenção em aparelhos eletrônicos tem garantia de 90 (noventa) dias, a contar da data de entrega do serviço.',
+  'Procedimento de banho químico por si só não tem garantia, entrando somente na garantia as peças que forem trocadas junto com o serviço de banho químico.',
+  'Nos procedimentos de banho químico é de conhecimento do cliente que o aparelho, caso esteja ligando e/ou funcionando parcialmente, pode parar de funcionar e/ou responder sem aviso ou intervenção técnica, não sendo a loja responsável por esses acontecimentos.',
+  'A garantia exclui totalmente danos causados por mau uso, incluindo quedas, arranhões e/ou amassados.',
+  'Devido à escassez de peças e dificuldade de importação, os retornos podem demorar até 2 dias úteis para serem atendidos.',
+  'Orçamento e/ou procedimento de banho químico: o prazo para retorno ao cliente é de 3 a 4 dias úteis.',
+  'Teste seu aparelho na entrega, pois não nos responsabilizamos por defeitos diferentes dos especificados na ordem de serviço.',
+  'Não nos responsabilizamos por chips, cartões de memória, capas, películas ou quaisquer acessórios deixados no aparelho. Em caso de extravio, não haverá qualquer ressarcimento.',
+  'A Buzz Tech não realiza backup de dados e não se responsabiliza pela perda de fotos, vídeos, documentos, aplicativos, contas ou quaisquer informações armazenadas no aparelho.',
+  'Aparelhos que ingressarem na assistência sem imagem, sem ligar ou sem possibilidade de teste terão garantia limitada aos serviços efetivamente executados, não abrangendo componentes que não puderem ser testados previamente.',
+  'Equipamentos abandonados: após 90 dias da comunicação de conclusão do serviço, poderão ser cobradas taxas de armazenamento conforme legislação aplicável, ficando o aparelho disponível para resgate mediante pagamento.',
+  'A aprovação verbal, por mensagem, ligação telefônica, WhatsApp ou qualquer meio eletrônico autoriza a execução do orçamento e dos serviços descritos nesta Ordem de Serviço/Garantia.',
+  'Aparelhos com histórico de queda, oxidação, contato com líquidos, superaquecimento, tentativas anteriores de reparo ou danos estruturais podem apresentar falhas adicionais ou tornar-se irrecuperáveis durante o processo técnico.',
+  'Serviços realizados em aparelhos Apple ou Android poderão afetar funcionalidades biométricas já comprometidas anteriormente. Não garantimos recuperação de Face ID, Touch ID ou biometria quando houver defeito pré-existente.',
+  'Equipamentos que apresentam cola solta, tela descolando, carcaça empenada ou estrutura comprometida poderão sofrer agravamento dos danos durante o reparo, não caracterizando falha na execução do serviço.',
+  'Em aparelhos com oxidação ou contato com líquidos não há garantia sobre recuperação de dados ou funcionamento futuro, ainda que o aparelho volte a funcionar após o reparo.',
+  'Orçamentos aprovados autorizam a execução integral do serviço descrito nesta Ordem de Serviço/Garantia.',
+  'A garantia concedida pela Buzz Tech cobre exclusivamente defeitos de funcionamento relacionados ao produto ou serviço descrito nesta OS. Não cobre quedas, impactos, líquidos, oxidação, mau uso, tentativa de reparo por terceiros, violação de lacres ou danos estéticos.'
+];
+const CLIENT_DECLARATION = 'Declaro que as informações fornecidas nesta Ordem de Serviço são verdadeiras e autorizo a Buzz Tech Assistência Técnica a realizar os procedimentos necessários para diagnóstico, orçamento e reparo do equipamento descrito neste documento.';
 
 function show(name) {
   Object.entries(views).forEach(([key, node]) => node.classList.toggle('hidden', key !== name));
@@ -113,7 +134,7 @@ function openDetail(id) {
   const o = orders.find(item => item.id === id);
   if (!o) return;
   views.detail.innerHTML = `<div class="screen-detail">
-    <div class="detail-head"><div class="detail-head-left"><button class="back" data-back>←</button><div><p class="eyebrow">${esc(o.service_kind || 'ORDEM DE SERVIÇO')}</p><div class="order-big">${o.number}</div></div></div><div class="detail-actions"><button class="secondary" id="editDetail">Editar</button><button class="secondary" id="techPdf">Ficha do técnico</button><button class="secondary" id="orderPdf">Abrir PDF</button><button class="primary" id="printDetail">Imprimir 2 vias</button></div></div>
+    <div class="detail-head"><div class="detail-head-left"><button class="back" data-back>←</button><div><p class="eyebrow">${esc(o.service_kind || 'ORDEM DE SERVIÇO')}</p><div class="order-big">${o.number}</div></div></div><div class="detail-actions"><button class="secondary" id="editDetail">Editar</button><button class="secondary" id="storePdf">Via da loja</button><button class="secondary" id="techPdf">Imprimir técnico</button><button class="secondary whatsapp" id="clientDigital">WhatsApp cliente</button><button class="primary" id="printDetail">Imprimir 2 vias</button></div></div>
     <div class="detail-grid"><div>
       <div class="detail-card"><h2>Cliente</h2><div class="info-grid">${info('Nome completo',o.customer_name)}${info('CPF',o.cpf)}${info('Telefone',o.phone)}${info('E-mail',o.email)}${info('Endereço',o.address,true)}</div></div>
       <div class="detail-card" style="margin-top:16px"><h2>Aparelho e atendimento</h2><div class="info-grid">${info('Aparelho',o.device_type)}${info('Marca / modelo',[o.brand,o.model].filter(Boolean).join(' / '))}${info('Cor / capacidade',[o.color,o.capacity].filter(Boolean).join(' / '))}${info('IMEI / série',o.serial_number)}${info('Senha / padrão',o.unlock_password)}${info('Conta removida',o.account_removed)}${info('Estado na entrada',o.device_condition,true)}${info('Acessórios',o.accessories,true)}${info('Checklist técnico',o.technical_checklist,true)}${info('Defeito relatado',o.reported_issue,true)}${info('Laudo técnico',o.technical_report,true)}${info('Observações',o.notes,true)}</div></div>
@@ -121,8 +142,9 @@ function openDetail(id) {
     <div class="print-sheet">${printableCopy(o,'VIA DA EMPRESA')}${printableCopy(o,'VIA DO CLIENTE')}</div>`;
   views.detail.querySelector('[data-back]').onclick = () => show('list');
   views.detail.querySelector('#editDetail').onclick = () => editOrder(id);
-  views.detail.querySelector('#orderPdf').onclick = () => HOSTED_MODE ? downloadPdf(o, false) : window.open(o.pdf_url, '_blank');
-  views.detail.querySelector('#techPdf').onclick = () => HOSTED_MODE ? downloadPdf(o, true) : window.open(o.technician_pdf_url, '_blank');
+  views.detail.querySelector('#storePdf').onclick = () => HOSTED_MODE ? downloadPdf(o, 'store') : window.open(o.store_pdf_url, '_blank');
+  views.detail.querySelector('#techPdf').onclick = () => HOSTED_MODE ? downloadPdf(o, 'technician') : window.open(o.technician_pdf_url, '_blank');
+  views.detail.querySelector('#clientDigital').onclick = () => shareClientPdf(o);
   views.detail.querySelector('#printDetail').onclick = () => window.print();
   show('detail');
 }
@@ -137,9 +159,12 @@ function printableCopy(o, copyLabel) {
     <div class="p-grid p3 blocks"><div><h3>3. DEFEITO INFORMADO</h3><p>${esc(o.reported_issue)}</p></div><div><h3>4. ESTADO NA ENTRADA</h3><p>${marked(o.device_condition)}</p></div><div><h3>5. ACESSÓRIOS</h3><p>${marked(o.accessories)}</p></div></div>
     <h3>6. CHECKLIST TÉCNICO</h3><p class="p-check">${marked(o.technical_checklist)}</p>
     <div class="p-grid p2 notes"><div><b>Laudo / observações técnicas:</b><p>${esc(o.technical_report || o.notes || '—')}</p></div><div><b>Valor aprovado:</b> ${money(o.estimated_value)}<br><b>Pagamento:</b> ${esc(o.payment_method || '—')}</div></div>
+    <div class="p-warranty"><b>GARANTIA REFERENTE A:</b> ${marked(o.warranty_items)}</div>
     <div class="p-warning">TELA TRINCADA, OXIDAÇÃO E DANOS FÍSICOS NÃO SÃO COBERTOS PELA GARANTIA.</div>
-    <p class="p-terms">Declaro verdadeiras as informações acima e autorizo o diagnóstico e os serviços aprovados. A garantia cobre somente o serviço e as peças descritas nesta OS; não cobre quedas, líquidos, oxidação, mau uso, dados ou acessórios deixados no aparelho. Equipamentos não retirados poderão estar sujeitos a taxa de armazenamento.</p>
+    <div class="p-legal">${LEGAL_TERMS.map((term,index)=>`<p><b>${index+1}.</b> ${esc(term)}</p>`).join('')}</div>
+    <p class="p-declaration"><b>DECLARAÇÃO DO CLIENTE:</b> ${esc(CLIENT_DECLARATION)}</p>
     <div class="p-grid p4 signatures">${line('Responsável técnico',o.technician)}${line('Recebido por',o.received_by)}${line('Retirado por / CPF',[o.picked_up_by,o.pickup_cpf].filter(Boolean).join(' · '))}${line('Assinatura do cliente','')}</div>
+    <footer class="p-footer">Feira dos Importados de Brasília · Bloco A · Loja 73/74 · (61) 98199-4436 · @buzztechbsb · Terça a domingo, 09h às 18h · Este documento não possui valor fiscal.</footer>
   </section>`;
 }
 
@@ -155,7 +180,7 @@ form.onsubmit = async event => {
     const payload = Object.fromEntries(data.entries());
     delete payload.order_id;
     payload.estimated_value = currencyToNumber(payload.estimated_value);
-    ['device_condition','accessories','technical_checklist'].forEach(name => payload[name] = data.getAll(name).join(', '));
+    ['device_condition','accessories','technical_checklist','warranty_items'].forEach(name => payload[name] = data.getAll(name).join(', '));
     let result;
     if (HOSTED_MODE) {
       const now = new Date().toISOString();
@@ -232,7 +257,8 @@ if (location.protocol === 'file:') {
   });
 }
 
-function downloadPdf(order, technician = false) {
+async function downloadPdf(order, variant = 'physical', share = false) {
+  const technician = variant === 'technician';
   const clean = value => String(value || '—').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '?');
   const escapePdf = value => clean(value).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
   const commands = [];
@@ -243,6 +269,15 @@ function downloadPdf(order, technician = false) {
     if (line) lines.push(line); return lines.length ? lines : ['—'];
   };
   const field = (x,y,label,value,width=78,max=2) => { text(x,y,label.toUpperCase(),6,true); wrap(value,width).slice(0,max).forEach((line,i)=>text(x,y-10-i*9,line,7)); };
+  const legalColumns = startY => {
+    [0,6,12].forEach((start,column) => {
+      let legalY=startY; const x=30+column*182;
+      LEGAL_TERMS.slice(start,start+6).forEach((term,index) => {
+        wrap(`${start+index+1}. ${term}`,72).forEach(line => { text(x,legalY,line,3.6); legalY-=4.2; });
+        legalY-=1;
+      });
+    });
+  };
   const copy = (top,label) => {
     commands.push(`0.16 0.48 0.82 rg 24 ${top-45} 547 40 re f`,`0 0 0 rg`);
     text(38,top-22,'OS DIGITAL',17,true); text(390,top-22,`${order.number} · ${label}`,10,true);
@@ -252,17 +287,45 @@ function downloadPdf(order, technician = false) {
     field(30,y,'Problema informado',order.reported_issue,70,3); field(330,y,'Estado na entrada',order.device_condition,42,3); y-=45;
     field(30,y,'Diagnostico / laudo',order.technical_report||'A preencher',70,3); field(350,y,'Valor',`R$ ${order.estimated_value||'—'}`,25); y-=45;
     field(30,y,'Acessorios',order.accessories,62,2); field(330,y,'Checklist',order.technical_checklist,48,2); y-=38;
-    text(30,y,'Tecnico: ____________________   Cliente: ____________________   Data: ____/____/______',7);
+    text(30,y,`GARANTIA REFERENTE A: ${order.warranty_items||'—'}`,4,true); y-=8;
+    text(30,y,'TELA TRINCADA, OXIDACAO E DANOS FISICOS NAO SAO COBERTOS PELA GARANTIA.',4,true); y-=8;
+    legalColumns(y); wrap(`DECLARACAO: ${CLIENT_DECLARATION}`,165).slice(0,2).forEach((line,index)=>text(30,top-325-index*4,line,3.4));
+    text(30,top-345,'Tecnico: ____________________   Cliente: ____________________   Data: ____/____/______',4.5);
+    text(30,top-363,'Feira dos Importados de Brasilia · Bloco A · Loja 73/74 · (61) 98199-4436 · @buzztechbsb',3.4);
+    text(30,top-373,'Terca a domingo, 09h as 18h (inclusive feriados) · Este documento nao possui valor fiscal.',3.4);
     commands.push(`0.7 0.7 0.7 RG 24 ${top-395} 547 395 re S`);
   };
   if (technician) {
     commands.push('0.16 0.48 0.82 rg','6 213 130 36 re f','0 0 0 rg'); text(12,232,'BUZZ TECH',12,true); text(88,232,order.number,7,true); text(12,219,'FICHA DO TECNICO · 5 x 9 cm',5);
     let y=199; [['Cliente',order.customer_name],['Contato',order.phone||order.email],['Senha / padrao',order.unlock_password],['Problema / diagnostico',order.technical_report||order.reported_issue||'A preencher']].forEach(([label,value],index)=>{field(10,y,label,value,index===3?34:36,index===3?5:3);y-=index===3?0:43;});
     text(10,18,'Tecnico: ____________________',6); text(10,8,'Data: ____/____/______',6);
-  } else { copy(830,'VIA DA EMPRESA'); copy(420,'VIA DO CLIENTE'); }
+  } else if (variant === 'client') { copy(420,'VIA DIGITAL DO CLIENTE'); }
+  else if (variant === 'store') { copy(420,'VIA ARQUIVADA DA LOJA'); }
+  else { copy(830,'VIA DA EMPRESA'); copy(420,'VIA DO CLIENTE'); }
   const stream=commands.join('\n');
-  const pageSize = technician ? '0 0 142 255' : '0 0 595 842';
+  const pageSize = technician ? '0 0 142 255' : variant === 'physical' ? '0 0 595 842' : '0 0 595 421';
   const objects=[`<< /Type /Catalog /Pages 2 0 R >>`,`<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,`<< /Type /Page /Parent 2 0 R /MediaBox [${pageSize}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>`,`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`];
   let pdf='%PDF-1.4\n'; const offsets=[0]; objects.forEach((obj,i)=>{offsets.push(pdf.length);pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;}); const xref=pdf.length; pdf+=`xref\n0 ${objects.length+1}\n0000000000 65535 f \n`; offsets.slice(1).forEach(offset=>pdf+=`${String(offset).padStart(10,'0')} 00000 n \n`); pdf+=`trailer << /Size ${objects.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  const blob=new Blob([pdf],{type:'application/pdf'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`${order.number}${technician?'-TECNICO':''}.pdf`; link.click(); setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+  const suffix = technician ? '-TECNICO' : variant === 'client' ? '-CLIENTE-DIGITAL' : variant === 'store' ? '-LOJA' : '';
+  const blob=new Blob([pdf],{type:'application/pdf'});
+  await shareOrDownload(blob, `${order.number}${suffix}.pdf`, share);
+}
+
+async function shareOrDownload(blob, filename, share = false) {
+  const file = new File([blob], filename, {type:'application/pdf'});
+  if (share && navigator.share && navigator.canShare?.({files:[file]})) {
+    try { await navigator.share({title:`Buzz Tech · ${filename}`,text:'Sua Ordem de Serviço Buzz Tech',files:[file]}); return; }
+    catch (error) { if (error.name === 'AbortError') return; }
+  }
+  const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=filename; link.click(); setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+  if (share) toast('PDF do cliente baixado. Anexe o arquivo na conversa do WhatsApp.');
+}
+
+async function shareClientPdf(order) {
+  if (HOSTED_MODE) return downloadPdf(order, 'client', true);
+  try {
+    const response = await fetch(order.client_pdf_url);
+    if (!response.ok) throw new Error('Não foi possível gerar a via digital.');
+    await shareOrDownload(await response.blob(), `${order.number}-CLIENTE-DIGITAL.pdf`, true);
+  } catch (error) { toast(error.message); }
 }

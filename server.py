@@ -60,6 +60,7 @@ def init_db():
             "warranty_until": "TEXT", "service_kind": "TEXT DEFAULT 'Ordem de serviço'",
             "payment_method": "TEXT", "picked_up_by": "TEXT", "pickup_cpf": "TEXT",
             "pickup_date": "TEXT", "technician": "TEXT", "received_by": "TEXT",
+            "warranty_items": "TEXT",
         }
         for column, kind in migrations.items():
             if column not in existing:
@@ -71,6 +72,8 @@ def order_dict(row):
     item["number"] = f"OS-{item['id']:06d}"
     item["pdf_url"] = f"/api/orders/{item['id']}/pdf"
     item["technician_pdf_url"] = f"/api/orders/{item['id']}/technician-pdf"
+    item["client_pdf_url"] = f"/api/orders/{item['id']}/client-pdf"
+    item["store_pdf_url"] = f"/api/orders/{item['id']}/store-pdf"
     return item
 
 
@@ -102,7 +105,7 @@ class Handler(BaseHTTPRequestHandler):
                 rows = db.execute("SELECT * FROM service_orders ORDER BY id DESC").fetchall()
             return self.send_json([order_dict(row) for row in rows])
 
-        if path.startswith("/api/orders/") and path.endswith(("/pdf", "/technician-pdf")):
+        if path.startswith("/api/orders/") and path.endswith(("/pdf", "/technician-pdf", "/client-pdf", "/store-pdf")):
             parts = path.strip("/").split("/")
             try:
                 order_id = int(parts[2])
@@ -113,8 +116,8 @@ class Handler(BaseHTTPRequestHandler):
             if not row:
                 return self.send_json({"error": "OS não encontrada."}, 404)
             order = order_dict(row)
-            technician = path.endswith("/technician-pdf")
-            target = generate_pdf(order, technician)
+            variant = "technician" if path.endswith("/technician-pdf") else "client" if path.endswith("/client-pdf") else "store" if path.endswith("/store-pdf") else "physical"
+            target = generate_pdf(order, variant)
             return self.send_pdf(target)
 
         if path.startswith("/api/orders/"):
@@ -161,8 +164,8 @@ class Handler(BaseHTTPRequestHandler):
             )
             row = db.execute("SELECT * FROM service_orders WHERE id = ?", (cursor.lastrowid,)).fetchone()
         order = order_dict(row)
-        generate_pdf(order, False)
-        generate_pdf(order, True)
+        for variant in ("physical", "technician", "client", "store"):
+            generate_pdf(order, variant)
         print(f"[OS] {order['number']} criada; PDFs gerados em {PDF_DIR}.")
         return self.send_json(order, 201)
 
@@ -194,8 +197,8 @@ class Handler(BaseHTTPRequestHandler):
             )
             row = db.execute("SELECT * FROM service_orders WHERE id = ?", (order_id,)).fetchone()
         order = order_dict(row)
-        generate_pdf(order, False)
-        generate_pdf(order, True)
+        for variant in ("physical", "technician", "client", "store"):
+            generate_pdf(order, variant)
         return self.send_json(order)
 
     def serve_static(self, path):
@@ -220,8 +223,31 @@ FIELDS = (
     "unlock_password", "account_removed", "accessories", "reported_issue",
     "device_condition", "technical_checklist", "technical_report", "notes", "status",
     "estimated_value", "warranty_until", "service_kind", "payment_method", "picked_up_by",
-    "pickup_cpf", "pickup_date", "technician", "received_by",
+    "pickup_cpf", "pickup_date", "technician", "received_by", "warranty_items",
 )
+
+LEGAL_TERMS = [
+    "Toda troca de peças ou manutenção em aparelhos eletrônicos tem garantia de 90 (noventa) dias, a contar da data de entrega do serviço.",
+    "Procedimento de banho químico por si só não tem garantia, entrando somente na garantia as peças que forem trocadas junto com o serviço de banho químico.",
+    "Nos procedimentos de banho químico é de conhecimento do cliente que o aparelho, caso esteja ligando e/ou funcionando parcialmente, pode parar de funcionar e/ou responder sem aviso ou intervenção técnica, não sendo a loja responsável por esses acontecimentos.",
+    "A garantia exclui totalmente danos causados por mau uso, incluindo quedas, arranhões e/ou amassados.",
+    "Devido à escassez de peças e dificuldade de importação, os retornos podem demorar até 2 dias úteis para serem atendidos.",
+    "Orçamento e/ou procedimento de banho químico: o prazo para retorno ao cliente é de 3 a 4 dias úteis.",
+    "Teste seu aparelho na entrega, pois não nos responsabilizamos por defeitos diferentes dos especificados na ordem de serviço.",
+    "Não nos responsabilizamos por chips, cartões de memória, capas, películas ou quaisquer acessórios deixados no aparelho. Em caso de extravio, não haverá qualquer ressarcimento.",
+    "A Buzz Tech não realiza backup de dados e não se responsabiliza pela perda de fotos, vídeos, documentos, aplicativos, contas ou quaisquer informações armazenadas no aparelho.",
+    "Aparelhos que ingressarem na assistência sem imagem, sem ligar ou sem possibilidade de teste terão garantia limitada aos serviços efetivamente executados, não abrangendo componentes que não puderem ser testados previamente.",
+    "Equipamentos abandonados: após 90 dias da comunicação de conclusão do serviço, poderão ser cobradas taxas de armazenamento conforme legislação aplicável, ficando o aparelho disponível para resgate mediante pagamento.",
+    "A aprovação verbal, por mensagem, ligação telefônica, WhatsApp ou qualquer meio eletrônico autoriza a execução do orçamento e dos serviços descritos nesta Ordem de Serviço/Garantia.",
+    "Aparelhos com histórico de queda, oxidação, contato com líquidos, superaquecimento, tentativas anteriores de reparo ou danos estruturais podem apresentar falhas adicionais ou tornar-se irrecuperáveis durante o processo técnico.",
+    "Serviços realizados em aparelhos Apple ou Android poderão afetar funcionalidades biométricas já comprometidas anteriormente. Não garantimos recuperação de Face ID, Touch ID ou biometria quando houver defeito pré-existente.",
+    "Equipamentos que apresentam cola solta, tela descolando, carcaça empenada ou estrutura comprometida poderão sofrer agravamento dos danos durante o reparo, não caracterizando falha na execução do serviço.",
+    "Em aparelhos com oxidação ou contato com líquidos não há garantia sobre recuperação de dados ou funcionamento futuro, ainda que o aparelho volte a funcionar após o reparo.",
+    "Orçamentos aprovados autorizam a execução integral do serviço descrito nesta Ordem de Serviço/Garantia.",
+    "A garantia concedida pela Buzz Tech cobre exclusivamente defeitos de funcionamento relacionados ao produto ou serviço descrito nesta OS. Não cobre quedas, impactos, líquidos, oxidação, mau uso, tentativa de reparo por terceiros, violação de lacres ou danos estéticos.",
+]
+
+CLIENT_DECLARATION = "Declaro que as informações fornecidas nesta Ordem de Serviço são verdadeiras e autorizo a Buzz Tech Assistência Técnica a realizar os procedimentos necessários para diagnóstico, orçamento e reparo do equipamento descrito neste documento."
 
 
 def normalized(payload):
@@ -272,49 +298,38 @@ def pdf_lines(commands, x, y, label, value, width=64, max_lines=2):
 
 def service_copy(commands, order, top, copy_name):
     bottom = top - 395
-    commands.extend(["0.18 0.48 0.72 rg", f"24 {top-48} 547 42 re f", "0 0 0 rg"])
-    pdf_text(commands, 38, top - 25, "BUZZ TECH", 17, True)
-    pdf_text(commands, 390, top - 20, f"{order['number']}  ·  {copy_name}", 10, True)
-    pdf_text(commands, 390, top - 36, order.get("service_kind") or "ORDEM DE SERVIÇO", 7)
-    y = top - 66
-    pdf_text(commands, 30, y, f"Entrada: {order.get('entry_date') or '—'}", 7, True)
-    pdf_text(commands, 190, y, f"Entrega: {order.get('delivery_date') or '—'}", 7)
-    pdf_text(commands, 350, y, f"Status: {order.get('status') or '—'}", 7)
-    pdf_text(commands, 475, y, f"Garantia: {order.get('warranty_until') or '—'}", 7)
-    y -= 18
-    pdf_text(commands, 30, y, "CLIENTE", 8, True)
-    y -= 12
-    pdf_lines(commands, 30, y, "Nome", order.get("customer_name"), 42)
-    pdf_lines(commands, 235, y, "CPF", order.get("cpf"), 24)
-    pdf_lines(commands, 360, y, "Contato", order.get("phone") or order.get("email"), 34)
-    y -= 32
-    pdf_lines(commands, 30, y, "Endereço", order.get("address"), 90)
-    y -= 32
-    pdf_text(commands, 30, y, "APARELHO", 8, True)
-    y -= 12
-    pdf_lines(commands, 30, y, "Equipamento", order.get("device_type"), 22)
-    pdf_lines(commands, 145, y, "Marca / Modelo", " / ".join(filter(None, [order.get("brand"), order.get("model")])), 30)
-    pdf_lines(commands, 305, y, "Cor / Capacidade", " / ".join(filter(None, [order.get("color"), order.get("capacity")])), 24)
-    pdf_lines(commands, 440, y, "IMEI / Série", order.get("serial_number"), 24)
-    y -= 34
-    pdf_lines(commands, 30, y, "Senha / padrão", order.get("unlock_password"), 22)
-    pdf_lines(commands, 145, y, "Conta removida", order.get("account_removed"), 20)
-    pdf_lines(commands, 265, y, "Acessórios", order.get("accessories"), 48)
-    y -= 34
-    pdf_lines(commands, 30, y, "Defeito informado", order.get("reported_issue"), 65, 3)
-    pdf_lines(commands, 330, y, "Estado na entrada", order.get("device_condition"), 45, 3)
-    y -= 44
-    pdf_lines(commands, 30, y, "Checklist técnico", order.get("technical_checklist"), 85, 2)
-    y -= 34
-    pdf_lines(commands, 30, y, "Laudo / diagnóstico", order.get("technical_report") or "A preencher", 68, 3)
-    pdf_lines(commands, 365, y, "Valor aprovado", f"R$ {order.get('estimated_value') or '—'}", 22)
-    y -= 44
-    commands.extend(["0.92 0.95 0.97 rg", f"30 {y-5} 535 20 re f", "0 0 0 rg"])
-    pdf_text(commands, 38, y + 2, "Garantia restrita ao serviço executado. Danos físicos, líquidos, oxidação e mau uso não estão cobertos.", 6, True)
-    y -= 27
-    pdf_text(commands, 30, y, "Responsável técnico: ____________________", 7)
-    pdf_text(commands, 225, y, "Recebido por: ____________________", 7)
-    pdf_text(commands, 410, y, "Cliente: ____________________", 7)
+    commands.extend(["0.18 0.48 0.72 rg", f"24 {top-38} 547 33 re f", "0 0 0 rg"])
+    pdf_text(commands, 34, top - 20, "BUZZ TECH", 13, True)
+    pdf_text(commands, 385, top - 17, f"{order['number']} · {copy_name}", 8, True)
+    pdf_text(commands, 385, top - 29, order.get("service_kind") or "ORDEM DE SERVIÇO", 5)
+    pdf_text(commands, 30, top-50, f"Entrada: {order.get('entry_date') or '—'}  Entrega: {order.get('delivery_date') or '—'}  Garantia: {order.get('warranty_until') or '—'}  Status: {order.get('status') or '—'}", 5, True)
+    pdf_text(commands, 30, top-63, f"CLIENTE: {order.get('customer_name') or '—'}  CPF: {order.get('cpf') or '—'}  CONTATO: {order.get('phone') or '—'}  E-MAIL: {order.get('email') or '—'}", 5)
+    pdf_text(commands, 30, top-74, f"ENDEREÇO: {order.get('address') or '—'}", 5)
+    pdf_text(commands, 30, top-87, f"APARELHO: {order.get('device_type') or '—'}  MARCA/MODELO: {order.get('brand') or '—'} / {order.get('model') or '—'}  COR/CAP.: {order.get('color') or '—'} / {order.get('capacity') or '—'}  IMEI/SÉRIE: {order.get('serial_number') or '—'}", 5)
+    pdf_text(commands, 30, top-98, f"SENHA/PADRÃO: {order.get('unlock_password') or '—'}  CONTA REMOVIDA: {order.get('account_removed') or '—'}  ACESSÓRIOS: {order.get('accessories') or '—'}", 5)
+    for index, line in enumerate(textwrap.wrap(f"DEFEITO: {order.get('reported_issue') or '—'}", 90)[:3]):
+        pdf_text(commands, 30, top-112-index*6, line, 5)
+    for index, line in enumerate(textwrap.wrap(f"ESTADO NA ENTRADA: {order.get('device_condition') or '—'}", 72)[:3]):
+        pdf_text(commands, 330, top-112-index*6, line, 5)
+    pdf_text(commands, 30, top-134, f"CHECKLIST: {order.get('technical_checklist') or '—'}", 5)
+    for index, line in enumerate(textwrap.wrap(f"LAUDO/DIAGNÓSTICO: {order.get('technical_report') or 'A preencher'}  OBS.: {order.get('notes') or '—'}", 112)[:3]):
+        pdf_text(commands, 30, top-147-index*6, line, 5)
+    pdf_text(commands, 30, top-169, f"VALOR: R$ {order.get('estimated_value') or '—'}  PAGAMENTO: {order.get('payment_method') or '—'}  GARANTIA REFERENTE A: {order.get('warranty_items') or '—'}", 5, True)
+    commands.extend(["0.92 0.95 0.97 rg", f"30 {top-185} 535 11 re f", "0 0 0 rg"])
+    pdf_text(commands, 35, top-181, "TELA TRINCADA, OXIDAÇÃO E DANOS FÍSICOS NÃO SÃO COBERTOS PELA GARANTIA.", 5, True)
+    for column, start in enumerate((0, 6, 12)):
+        legal_y = top - 195
+        x = 30 + column * 182
+        for number, term in enumerate(LEGAL_TERMS[start:start+6], start+1):
+            for line in textwrap.wrap(f"{number}. {term}", 72):
+                pdf_text(commands, x, legal_y, line, 3.6)
+                legal_y -= 4.2
+            legal_y -= 1
+    for index, line in enumerate(textwrap.wrap(f"DECLARAÇÃO: {CLIENT_DECLARATION}", 165)[:2]):
+        pdf_text(commands, 30, top-325-index*4, line, 3.4)
+    pdf_text(commands, 30, top-345, f"Técnico: {order.get('technician') or '________________'}  Recebido por: {order.get('received_by') or '________________'}  Retirado por: {order.get('picked_up_by') or '________________'}  Cliente: ____________________", 4.5)
+    pdf_text(commands, 30, top-363, "Feira dos Importados de Brasília · Bloco A · Loja 73/74 · (61) 98199-4436 · @buzztechbsb", 3.4)
+    pdf_text(commands, 30, top-373, "Terça a domingo, 09h às 18h (inclusive feriados) · Este documento não possui valor fiscal.", 3.4)
     commands.append(f"0.65 0.65 0.65 RG 24 {bottom} 547 {top-bottom} re S")
 
 
@@ -362,17 +377,22 @@ def write_simple_pdf(path, commands, media_box=(595, 842)):
     path.write_bytes(content)
 
 
-def generate_pdf(order, technician=False):
+def generate_pdf(order, variant="physical"):
     PDF_DIR.mkdir(exist_ok=True)
-    suffix = "-TECNICO" if technician else ""
+    suffix = {"technician": "-TECNICO", "client": "-CLIENTE-DIGITAL", "store": "-LOJA"}.get(variant, "")
     target = PDF_DIR / f"{order['number']}{suffix}.pdf"
     commands = []
-    if technician:
+    if variant == "technician":
         technician_page(commands, order)
-    else:
+    elif variant == "physical":
         service_copy(commands, order, 830, "VIA DA EMPRESA")
         service_copy(commands, order, 420, "VIA DO CLIENTE")
-    write_simple_pdf(target, commands, (142, 255) if technician else (595, 842))
+    elif variant == "client":
+        service_copy(commands, order, 420, "VIA DIGITAL DO CLIENTE")
+    else:
+        service_copy(commands, order, 420, "VIA ARQUIVADA DA LOJA")
+    size = (142, 255) if variant == "technician" else (595, 842) if variant == "physical" else (595, 421)
+    write_simple_pdf(target, commands, size)
     return target
 
 
