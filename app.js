@@ -70,7 +70,7 @@ function openDetail(id) {
   const o = orders.find(item => item.id === id);
   if (!o) return;
   views.detail.innerHTML = `<div class="screen-detail">
-    <div class="detail-head"><div class="detail-head-left"><button class="back" data-back>←</button><div><p class="eyebrow">${esc(o.service_kind || 'ORDEM DE SERVIÇO')}</p><div class="order-big">${o.number}</div></div></div><div class="detail-actions"><button class="secondary" id="editDetail">Editar</button><button class="primary" id="printDetail">Imprimir 2 vias</button></div></div>
+    <div class="detail-head"><div class="detail-head-left"><button class="back" data-back>←</button><div><p class="eyebrow">${esc(o.service_kind || 'ORDEM DE SERVIÇO')}</p><div class="order-big">${o.number}</div></div></div><div class="detail-actions"><button class="secondary" id="editDetail">Editar</button><button class="secondary" id="techPdf">Ficha do técnico</button><button class="secondary" id="orderPdf">Abrir PDF</button><button class="primary" id="printDetail">Imprimir 2 vias</button></div></div>
     <div class="detail-grid"><div>
       <div class="detail-card"><h2>Cliente</h2><div class="info-grid">${info('Nome completo',o.customer_name)}${info('CPF',o.cpf)}${info('Telefone',o.phone)}${info('E-mail',o.email)}${info('Endereço',o.address,true)}</div></div>
       <div class="detail-card" style="margin-top:16px"><h2>Aparelho e atendimento</h2><div class="info-grid">${info('Aparelho',o.device_type)}${info('Marca / modelo',[o.brand,o.model].filter(Boolean).join(' / '))}${info('Cor / capacidade',[o.color,o.capacity].filter(Boolean).join(' / '))}${info('IMEI / série',o.serial_number)}${info('Senha / padrão',o.unlock_password)}${info('Conta removida',o.account_removed)}${info('Estado na entrada',o.device_condition,true)}${info('Acessórios',o.accessories,true)}${info('Checklist técnico',o.technical_checklist,true)}${info('Defeito relatado',o.reported_issue,true)}${info('Laudo técnico',o.technical_report,true)}${info('Observações',o.notes,true)}</div></div>
@@ -78,6 +78,8 @@ function openDetail(id) {
     <div class="print-sheet">${printableCopy(o,'VIA DA EMPRESA')}${printableCopy(o,'VIA DO CLIENTE')}</div>`;
   views.detail.querySelector('[data-back]').onclick = () => show('list');
   views.detail.querySelector('#editDetail').onclick = () => editOrder(id);
+  views.detail.querySelector('#orderPdf').onclick = () => window.open(o.pdf_url, '_blank');
+  views.detail.querySelector('#techPdf').onclick = () => window.open(o.technician_pdf_url, '_blank');
   views.detail.querySelector('#printDetail').onclick = () => window.print();
   show('detail');
 }

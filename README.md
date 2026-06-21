@@ -13,3 +13,5 @@ Clique com o botão direito em `iniciar.ps1` e escolha **Executar com PowerShell
 Depois acesse `http://127.0.0.1:8000` no navegador.
 
 Os dados ficam no arquivo `ordens.db`, criado automaticamente. Faça backup desse arquivo regularmente. A numeração usa a sequência interna `AUTOINCREMENT` do SQLite e não é reaproveitada.
+
+Cada OS também gera automaticamente dois arquivos na pasta `pdfs`: o documento completo em duas vias e uma ficha interna para o técnico.
